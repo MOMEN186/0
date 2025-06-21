@@ -1,6 +1,4 @@
-git add Dockerfile
-git commit -m "add Dockerfile for deployment"
-git pushFROM node:20-alpine AS base
+FROM node:20-alpine AS base
 LABEL org.opencontainers.image.title="4RB ANIME" \
   org.opencontainers.image.description="Arabic Anime streaming service UI" \
   org.opencontainers.image.maintainer="admin@4rb-anime.com" \
