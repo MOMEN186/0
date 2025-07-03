@@ -1,12 +1,10 @@
 import React, { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import Button from "./common/custom-button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { Input } from "./ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import Button from "../common/custom-button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Input } from "../ui/input";
 import DiscordIcon from "@/icons/discord";
-import { signInWithGoogle, signInWithEmail } from "@/lib/auth";
-import { signIn } from "next-auth/react";
-import { useSession } from "next-auth/react";
+import { signInWithGoogle, signInWithEmail, signInWithDiscord } from "@/lib/firebase/auth";
 type FormData = {
   username: string;
   email: string;
@@ -15,7 +13,7 @@ type FormData = {
 };
 
 function LoginPopoverButton() {
-  const { status } = useSession();
+ 
 
   const [formData, setFormData] = useState<FormData>({
     username: "",
@@ -36,14 +34,13 @@ function LoginPopoverButton() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        {status==="unauthenticated" &&
           <Button
             variant="outline"
             className="bg-white text-md text-black hover:bg-gray-200 hover:text-black transition-all duration-300"
           >
             Login
           </Button>
-        }
+        
       </PopoverTrigger>
       <PopoverContent
         side="bottom"
@@ -97,7 +94,7 @@ function LoginPopoverButton() {
               variant="default"
               className="bg-blue-600 hover:bg-blue-800 text-white w-full text-xs"
               size="sm"
-              onClick={() => signIn("discord")}
+              onClick={() => signInWithDiscord()}
             >
               <DiscordIcon className="mr-2" />
               Login with Discord
@@ -171,7 +168,7 @@ function LoginPopoverButton() {
               variant="default"
               className="bg-blue-600 hover:bg-blue-800 text-white w-full text-xs"
               size="sm"
-              onClick={()=> signIn("discord")}
+              onClick={()=> signInWithDiscord()}
             >
               <DiscordIcon className="mr-2" />
               Signup with Discord

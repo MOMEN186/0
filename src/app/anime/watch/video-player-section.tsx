@@ -14,7 +14,7 @@ import { IWatchedAnime } from "@/types";
 import { pb } from "@/lib/database";
 
 const VideoPlayerSection = () => {
-  const { selectedEpisode, anime } = useAnimeStore();
+  const { selectedEpisode, anime } = useAnimeStore();// selected anime and its episode 
   const { data: serversData } = useGetEpisodeServers(selectedEpisode);
 
   const [serverName, setServerName] = useState<string>("");

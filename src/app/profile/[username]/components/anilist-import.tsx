@@ -15,8 +15,9 @@ import { useGetAnilistAnimes } from "@/mutation/get-anilist-animes";
 import { toast } from "sonner";
 import { AnilistMediaList } from "@/types/anilist-animes";
 import { api } from "@/lib/api";
-import useBookMarks from "@/hooks/use-get-bookmark";
+import useFirebaseBookmarks from "@/hooks/use-get-bookmark";
 import { Badge } from "@/components/ui/badge";
+import { useAuthStore } from "@/store/auth-store";
 
 function AnilistImport() {
   const getAnilistAnime = useGetAnilistAnimes();
@@ -24,7 +25,8 @@ function AnilistImport() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [step, setStep] = React.useState(1);
   const [animes, setAnimes] = React.useState<AnilistMediaList[]>([]);
-  const bookmark = useBookMarks({ populate: false });
+  const { auth } = useAuthStore();
+  const bookmark = useFirebaseBookmarks(auth?.id || "");
   const [open, setOpen] = React.useState(false);
 
   const onSubmitStepOne = async () => {
@@ -59,6 +61,14 @@ function AnilistImport() {
       });
       return;
     }
+    
+    if (!auth?.id) {
+      toast.error("You must be logged in to import anime", {
+        style: { background: "red" },
+      });
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -73,15 +83,14 @@ function AnilistImport() {
         return;
       }
 
-      // update in pb
+      // update in firebase
       const animeList = data.animes;
       for (const anime of animeList) {
-        await bookmark.createOrUpdateBookMark(
+        await bookmark.createOrUpdateBookmark(
           anime.id,
           anime.title,
           anime.thumbnail,
           anime.status,
-          false,
         );
       }
 
