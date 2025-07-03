@@ -64,12 +64,8 @@ const Layout = (props: Props) => {
   const { setAnime, setSelectedEpisode } = useAnimeStore();
   const router = useRouter();
 
-  const currentAnimeId = useMemo(
-    () => searchParams.get("anime"),
-    [searchParams],
-  );
-  const episodeId = searchParams.get("episode");
-
+  const currentAnimeId = searchParams ? searchParams.get("anime") : null;
+const episodeId = searchParams ? searchParams.get("episode") : null;
   const [animeId, setAnimeId] = useState<string | null>(currentAnimeId);
 
   useEffect(() => {

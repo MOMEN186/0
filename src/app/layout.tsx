@@ -1,16 +1,15 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-
 import NavBar from "@/components/navbar";
 import Footer from "@/components/footer";
 import Script from "next/script";
 import QueryProvider from "@/providers/query-provider";
 import { PublicEnvScript } from "next-runtime-env";
-
-import { ThemeProvider } from "@/components/theme-provider";
-
+import ThemeProvider  from "@/components/theme-provider";
+import AuthProvider from "@/providers/session-provider";
 import { Toaster } from "@/components/ui/sonner";
+import ClientOnly from "@/components/ClientOnly";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -93,6 +92,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.className} antialiased max-w-[100vw] overflow-x-hidden`}
       >
+        <ClientOnly>
+        <AuthProvider>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -105,7 +106,9 @@ export default function RootLayout({
             <Footer />
             <Toaster />
           </QueryProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+          </AuthProvider>
+          </ClientOnly>
       </body>
     </html>
   );

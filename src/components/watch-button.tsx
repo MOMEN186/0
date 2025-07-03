@@ -11,9 +11,8 @@ import { useHasAnimeWatched } from "@/hooks/use-is-anime-watched";
 import { useGetLastEpisodeWatched } from "@/hooks/use-get-last-episode-watched";
 
 const WatchButton = () => {
-  const pathName = usePathname();
-  const animeId = pathName.split("/")[2];
-
+  const pathName = usePathname() ?? "";  
+const animeId = pathName.split("/")[2] || "";
   const { hasWatchedAnime } = useHasAnimeWatched(animeId);
   const latestEpisodeWatched = useGetLastEpisodeWatched(animeId);
 
