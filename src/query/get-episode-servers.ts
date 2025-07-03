@@ -9,7 +9,9 @@ const getEpisodeServers = async (episodeId: string) => {
       animeEpisodeId: decodeURIComponent(episodeId),
     },
   });
-  return res.data.data as IEpisodeServers;
+  const result = (await res.data.data) as IEpisodeServers;
+  console.log("getEpisodeServers", result);
+  return result;
 };
 
 export const useGetEpisodeServers = (episodeId: string) => {

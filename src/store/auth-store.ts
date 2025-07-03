@@ -1,19 +1,20 @@
-import { create } from "zustand";
+// src/store/auth-store.ts
+import {create} from "zustand";
 import { persist } from "zustand/middleware";
 
-export type IAuth = {
+// User auth data interface (only user fields)
+export interface IAuth {
   id: string;
-  avatar: string;
   email: string;
-  username: string;
-  collectionId: string;
-  collectionName: string;
+  displayName: string;
+  photoURL: string;
   autoSkip: boolean;
-};
+}
 
+// Zustand store interface (state + actions)
 export interface IAuthStore {
   auth: IAuth | null;
-  setAuth: (state: IAuth) => void;
+  setAuth: (auth: IAuth | null) => void;
   clearAuth: () => void;
   isRefreshing: boolean;
   setIsRefreshing: (val: boolean) => void;
@@ -23,21 +24,14 @@ export const useAuthStore = create<IAuthStore>()(
   persist(
     (set) => ({
       auth: null,
-      setAuth: (state: IAuth) => set({ auth: state }),
+      setAuth: (auth) => set({ auth }),
       clearAuth: () => set({ auth: null }),
       isRefreshing: true,
-      setIsRefreshing: (val: boolean) => set({ isRefreshing: val }),
+      setIsRefreshing: (val) => set({ isRefreshing: val }),
     }),
     {
-      name: "auth",
-      partialize: (state) => ({
-        auth: state.auth,
-      }),
-      version: 0,
-    },
-  ),
+      name: "auth-storage",
+      // You can add versioning, storage options here if needed
+    }
+  )
 );
-
-export const useAuthHydrated = () => {
-  return useAuthStore.persist.hasHydrated();
-};
