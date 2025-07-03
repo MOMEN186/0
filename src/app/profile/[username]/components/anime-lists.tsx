@@ -1,7 +1,7 @@
 import AnimeCard from "@/components/anime-card";
 import Pagination from "@/components/common/pagination";
 import { ROUTES } from "@/constants/routes";
-import useBookMarks from "@/hooks/use-get-bookmark";
+import useFirebaseBookmarks from "@/hooks/use-get-bookmark";
 import React from "react";
 
 type Props = {
@@ -11,7 +11,7 @@ type Props = {
 function AnimeLists(props: Props) {
   const [currentPage, setPage] = React.useState(1);
 
-  const { bookmarks, totalPages, isLoading } = useBookMarks({
+  const { bookmarks, totalPages, isLoading } = useFirebaseBookmarks({
     status: props.status,
     page: currentPage,
     per_page: 8,
@@ -46,7 +46,7 @@ function AnimeLists(props: Props) {
     <>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-10">
         {bookmarks.map((bookmark) => {
-          const latestEpisode = bookmark.expand.watchHistory
+          const latestEpisode = bookmark.expand?.watchHistory
             ? bookmark.expand.watchHistory.sort(
                 (a, b) => b.episodeNumber - a.episodeNumber,
               )[0]

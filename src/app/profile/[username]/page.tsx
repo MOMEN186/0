@@ -1,55 +1,51 @@
 "use client";
-import React, { useEffect } from "react";
+
+import React, { useEffect, useState } from "react";
 import Container from "@/components/container";
 import Avatar from "@/components/common/avatar";
-import { useAuthHydrated, useAuthStore } from "@/store/auth-store";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useRouter } from "next/navigation";
-import { pb } from "@/lib/pocketbase";
-import { toast } from "sonner";
 import Image from "next/image";
 import CoverImage from "@/assets/cover.png";
 import AnimeLists from "./components/anime-lists";
 import AnimeHeatmap from "./components/anime-heatmap";
-import Loading from "@/app/loading";
 import AnilistImport from "./components/anilist-import";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { uploadAvatar } from "@/lib/firebase/fileUpload";
 
 function ProfilePage() {
-  const { auth, setAuth } = useAuthStore();
   const router = useRouter();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const hasHydrated = useAuthHydrated();
+
+  const [user, setUser] = useState<ReturnType<typeof getAuth>["currentUser"] | null>(null);
+  const [loading, setLoading] = useState(true); // ✅ add loading state
 
   useEffect(() => {
-    if (hasHydrated && !auth) {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoading(false); // ✅ update loading after auth check
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (!loading && user === null) {
       router.replace("/");
     }
-  }, [auth, hasHydrated, router]);
+  }, [user, loading, router]);
 
-  if (!hasHydrated) {
-    return <Loading />;
-  }
+  if (loading) return <>Loading...</>; // ✅ show loading while waiting for auth
 
-  if (!auth) {
-    return null;
-  }
+  if (!user) return null; // if still null after loading, return null (redirecting)
 
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
+  const handleAvatarUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const res = await pb.collection("users").update(auth.id, {
-        avatar: file,
-      });
+    if (!file) return;
 
-      if (res) {
-        setAuth({ ...auth, avatar: res.avatar });
-        toast.success("Avatar updated successfully", {
-          style: { background: "green" },
-        });
-      }
-    }
+    await uploadAvatar(file);
   };
 
   return (
@@ -69,24 +65,19 @@ function ProfilePage() {
         <div className="flex flex-col items-center gap-5 w-full md:w-1/3">
           <Avatar
             className="w-[150px] h-[150px] cursor-pointer"
-            username={auth.username}
-            url={auth.avatar}
-            collectionID={auth.collectionId}
-            id={auth.id}
-            onClick={() => {
-              if (fileInputRef.current) {
-                fileInputRef.current.click();
-              }
-            }}
+            username={user.displayName || "user"}
+            url={user.photoURL || ""}
+            id={user.uid}
+            onClick={() => fileInputRef.current?.click()}
           />
           <input
             type="file"
             ref={fileInputRef}
             accept="image/*"
-            onChange={handleFileChange}
+            onChange={handleAvatarUpload}
             className="hidden"
           />
-          <h2 className="text-xl">@{auth.username}</h2>
+          <h2 className="text-xl">@{user.displayName}</h2>
         </div>
         <div className="w-full md:w-2/3">
           <div className="w-full">
