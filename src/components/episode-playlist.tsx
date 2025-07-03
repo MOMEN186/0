@@ -28,11 +28,10 @@ const EpisodePlaylist = ({
   isLoading,
   bookmarks,
 }: Props) => {
-  const searchParams = useSearchParams();
+    const searchParams = useSearchParams();
 
-  const episodeId = searchParams.get("episode");
-
-  const isLatestEpisode = searchParams.get("type");
+  const episodeId = searchParams?.get("episode") ?? null;
+  const isLatestEpisode = searchParams?.get("type") ?? null;
 
   const { setSelectedEpisode } = useAnimeStore();
 

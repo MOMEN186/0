@@ -1,16 +1,35 @@
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
   4rb-anime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
     image: 4rb-anime/4rb-anime:latest
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_POCKETBASE_URL=http://localhost:8090
-      - NEXT_PUBLIC_PROXY_URL=http://localhost:4040
+      NEXT_PUBLIC_POCKETBASE_URL: http://localhost:8090
+      NEXT_PUBLIC_PROXY_URL: http://proxy:4040
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
 
   proxy:
     image: dovakiin0/proxy-m3u8:latest
     ports:
       - "4040:4040"
     environment:
-      - PORT=4040
-      - CORS_DOMAIN=localhost:3000
+      PORT: 4040
+      CORS_DOMAIN: "localhost:3000,4rb-anime"
+
+volumes:
+  redis_data:

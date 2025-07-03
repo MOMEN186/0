@@ -61,8 +61,8 @@ const SelectOptions: ISelectOptions[] = [
 ];
 
 const Page = () => {
-  const { slug } = useParams();
-  const { data: anime, isLoading } = useGetAnimeDetails(slug as string);
+  const { slug } = useParams() as { slug: string };
+    const { data: anime, isLoading } = useGetAnimeDetails(slug as string);
   const { auth } = useAuthStore();
   const { bookmarks, createOrUpdateBookMark } = useBookMarks({
     animeID: slug as string,
