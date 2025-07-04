@@ -1,9 +1,10 @@
 export interface IAnimeDetails {
-  anime: Anime;
-  seasons: Season[];
-  mostPopularAnimes: MostPopularAnime[];
-  relatedAnimes: RelatedAnime[];
-  recommendedAnimes: RecommendedAnime[];
+  id: string;
+  title: string;
+  info: {
+    poster: string;
+  };
+  episodes: Episode[]; // renamed to avoid confusion
 }
 
 export interface Season {
@@ -34,12 +35,19 @@ export interface Info {
 export interface Stats {
   rating: string;
   quality: string;
-  episodes: Episodes;
+  episodes: EpisodeCount; // renamed from Episodes
   type: string;
   duration: string;
 }
 
-export interface Episodes {
+export interface Episode {
+  id: string;
+  title?: string;
+  sub: number | null;
+  dub: number | null;
+}
+
+export interface EpisodeCount {
   sub: number;
   dub: number;
 }
@@ -87,13 +95,8 @@ export interface MostPopularAnime {
   name: string;
   jname: string;
   poster: string;
-  episodes: Episodes2;
+  episodes: EpisodeCount;
   type: string;
-}
-
-export interface Episodes2 {
-  sub: number;
-  dub: number;
 }
 
 export interface RelatedAnime {
@@ -101,13 +104,8 @@ export interface RelatedAnime {
   name: string;
   jname: string;
   poster: string;
-  episodes: Episodes3;
+  episodes: Partial<EpisodeCount>;
   type: string;
-}
-
-export interface Episodes3 {
-  sub: number;
-  dub?: number;
 }
 
 export interface RecommendedAnime {
@@ -118,10 +116,5 @@ export interface RecommendedAnime {
   duration: string;
   type: string;
   rating?: string;
-  episodes: Episodes4;
-}
-
-export interface Episodes4 {
-  sub: number;
-  dub?: number;
+  episodes: Partial<EpisodeCount>;
 }

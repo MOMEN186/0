@@ -14,7 +14,7 @@ import { IWatchedAnime } from "@/types";
 import { pb } from "@/lib/database";
 
 const VideoPlayerSection = () => {
-  const { selectedEpisode, anime } = useAnimeStore();// selected anime and its episode 
+  const { selectedEpisode, anime } = useAnimeStore();
   const { data: serversData } = useGetEpisodeServers(selectedEpisode);
 
   const [serverName, setServerName] = useState<string>("");
@@ -71,18 +71,17 @@ const VideoPlayerSection = () => {
 
     if (episodeData) {
       const existingAnime = watchedDetails.find(
-        (watchedAnime) => watchedAnime.anime.id === anime.anime.info.id,
+        (watchedAnime) => watchedAnime.anime.id === anime.id,
       );
 
       if (!existingAnime) {
-        // Add new anime entry if it doesn't exist
         const updatedWatchedDetails = [
           ...watchedDetails,
           {
             anime: {
-              id: anime.anime.info.id,
-              title: anime.anime.info.name,
-              poster: anime.anime.info.poster,
+              id: anime.id,
+              title: anime.title,
+              poster: anime.info.poster,
             },
             episodes: [selectedEpisode],
           },
@@ -90,21 +89,18 @@ const VideoPlayerSection = () => {
         localStorage.setItem("watched", JSON.stringify(updatedWatchedDetails));
         setWatchedDetails(updatedWatchedDetails);
       } else {
-        // Update the existing anime entry
         const episodeAlreadyWatched =
           existingAnime.episodes.includes(selectedEpisode);
 
         if (!episodeAlreadyWatched) {
-          // Add the new episode to the list
           const updatedWatchedDetails = watchedDetails.map((watchedAnime) =>
-            watchedAnime.anime.id === anime.anime.info.id
+            watchedAnime.anime.id === anime.id
               ? {
                   ...watchedAnime,
                   episodes: [...watchedAnime.episodes, selectedEpisode],
                 }
               : watchedAnime,
           );
-
           localStorage.setItem(
             "watched",
             JSON.stringify(updatedWatchedDetails),
@@ -113,13 +109,19 @@ const VideoPlayerSection = () => {
         }
       }
     }
-    //eslint-disable-next-line
   }, [episodeData, selectedEpisode, auth]);
 
-  if (isLoading || !episodeData)
+  const episode = anime.episodes?.find((ep) => ep.id === selectedEpisode);
+
+  if (isLoading || !episodeData) {
     return (
       <div className="h-auto aspect-video lg:max-h-[calc(100vh-150px)] min-h-[20vh] sm:min-h-[30vh] md:min-h-[40vh] lg:min-h-[60vh] w-full animate-pulse bg-slate-700 rounded-md"></div>
     );
+  }
+
+  if (!episode) {
+    return <div>Episode not found</div>;
+  }
 
   return !episodeData?.sources || episodeData.sources.length === 0 ? (
     <div className="min-h-[40vh] flex flex-col items-center justify-center">
@@ -137,13 +139,14 @@ const VideoPlayerSection = () => {
   ) : (
     <div className="space-y-4">
       <ArbPlayer
-        key={episodeData?.sources?.[0].url}
-        episodeInfo={episodeData}
+        src={episodeData?.sources?.[0].url || ""}
+        posterUrl={anime.info.poster || ""}
+        episodeInfo={episode}
         serversData={serversData!}
         animeInfo={{
-          id: anime.anime.info.id,
-          title: anime.anime.info.name,
-          image: anime.anime.info.poster,
+          id: anime.id,
+          title: anime.title,
+          image: anime.info.poster,
         }}
         onServerChange={changeServer}
         onAutoSkipChange={onHandleAutoSkipChange}

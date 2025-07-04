@@ -15,14 +15,7 @@ import { db } from "@/lib/firebase/firebase";
 import { useAuthStore } from "@/store/auth-store";
 import { toast } from "sonner";
 
-interface BookmarkHookParams {
-  status?: string;
-  page?: number;
-  per_page?: number;
-  animeId?: string;
-}
-
-interface BookmarkData {
+export interface BookmarkData {
   id: string;
   userID: string;
   animeId: string;
@@ -31,10 +24,16 @@ interface BookmarkData {
   status: string;
   createdAt: any;
   updatedAt?: any;
-  watchHistory?: any[];
   expand?: {
     watchHistory?: any[];
   };
+}
+
+interface BookmarkHookParams {
+  status?: string;
+  page?: number;
+  per_page?: number;
+  animeId?: string;
 }
 
 function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
@@ -45,13 +44,13 @@ function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
   const [totalCount, setTotalCount] = useState(0);
 
   const isLegacyCall = typeof params === "string";
-  const animeID = isLegacyCall ? params : undefined;
+  const animeID = isLegacyCall ? params : params?.animeId;
   const status = isLegacyCall ? undefined : params?.status;
   const page = isLegacyCall ? 1 : params?.page || 1;
   const per_page = isLegacyCall ? 50 : params?.per_page || 10;
 
   useEffect(() => {
-    if (!auth) {
+    if (!auth?.id) {
       setBookmarks([]);
       setTotalPages(1);
       setTotalCount(0);
@@ -61,61 +60,36 @@ function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
     const fetchBookmarks = async () => {
       setLoading(true);
       try {
-        const bookmarksRef = collection(db, "bookmark"); // ✅ Corrected
+        const bookmarksRef = collection(db, "bookmark");
 
-        let baseQuery = query(bookmarksRef, where("userID", "==", auth.id)); // ✅ Corrected
-
-        if (animeID) {
-          baseQuery = query(baseQuery, where("animeID", "==", animeID));
-        }
-
-        if (status) {
-          baseQuery = query(baseQuery, where("status", "==", status));
-        }
+        let baseQuery = query(bookmarksRef, where("userID", "==", auth.id));
+        if (animeID) baseQuery = query(baseQuery, where("animeID", "==", animeID));
+        if (status) baseQuery = query(baseQuery, where("status", "==", status));
 
         const countSnapshot = await getCountFromServer(baseQuery);
         const total = countSnapshot.data().count;
         setTotalCount(total);
         setTotalPages(Math.ceil(total / per_page));
 
-        const paginatedQuery = query(
-          baseQuery,
-          orderBy("createdAt", "desc"),
-          limit(per_page)
-        );
-
+        let bookmarkDocs;
         if (page > 1) {
           const offset = (page - 1) * per_page;
-          const allDocsQuery = query(
-            baseQuery,
-            orderBy("createdAt", "desc"),
-            limit(offset + per_page)
-          );
+          const allDocsQuery = query(baseQuery, orderBy("createdAt", "desc"), limit(offset + per_page));
           const allSnapshot = await getDocs(allDocsQuery);
-          const docsToReturn = allSnapshot.docs.slice(offset);
-
-          const items = docsToReturn.map(
-            (doc) =>
-              ({
-                id: doc.id,
-                ...doc.data(),
-              } as BookmarkData)
-          );
-          setBookmarks(items);
+          bookmarkDocs = allSnapshot.docs.slice(offset);
         } else {
+          const paginatedQuery = query(baseQuery, orderBy("createdAt", "desc"), limit(per_page));
           const snapshot = await getDocs(paginatedQuery);
-          const items = snapshot.docs.map(
-            (doc) =>
-              ({
-                id: doc.id,
-                ...doc.data(),
-              } as BookmarkData)
-          );
-          setBookmarks(items);
+          bookmarkDocs = snapshot.docs;
         }
 
+        const rawBookmarks = bookmarkDocs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        } as BookmarkData));
+
         const bookmarksWithHistory = await Promise.all(
-          bookmarks.map(async (bookmark) => {
+          rawBookmarks.map(async (bookmark) => {
             try {
               const watchHistoryQuery = query(
                 collection(db, "watchHistory"),
@@ -130,16 +104,10 @@ function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
 
               return {
                 ...bookmark,
-                expand: {
-                  watchHistory,
-                },
+                expand: { watchHistory },
               };
             } catch (error) {
-              console.error(
-                "Error fetching watch history for bookmark:",
-                bookmark.id,
-                error
-              );
+              console.error("Error fetching watch history:", bookmark.id, error);
               return bookmark;
             }
           })
@@ -155,81 +123,91 @@ function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
     };
 
     fetchBookmarks();
-  }, [auth, animeID, status, page, per_page]);
+  }, [auth?.id, animeID, status, page, per_page]);
 
   const createOrUpdateBookmark = async (
     animeId: string,
     animeTitle: string,
     thumbnail: string,
     newStatus: string
-  ) => {
-    if (!auth) return;
+  ): Promise<string | null> => {
+    if (!auth?.id) return null;
 
     try {
-      const bookmarksRef = collection(db, "bookmark"); // ✅ Corrected
-      const q = query(
-        bookmarksRef,
-        where("userID", "==", auth.id), // ✅ Corrected
-        where("animeID", "==", animeId)
-      );
-
+      const bookmarksRef = collection(db, "bookmark");
+      const q = query(bookmarksRef, where("userID", "==", auth.id), where("animeID", "==", animeId));
       const snapshot = await getDocs(q);
 
       if (!snapshot.empty) {
         const docRef = snapshot.docs[0].ref;
         const existing = snapshot.docs[0].data();
-
-        if (existing.status === newStatus) {
-          toast.error("Already in this status");
-          return;
+        if (existing.status !== newStatus) {
+          await updateDoc(docRef, {
+            status: newStatus,
+            updatedAt: serverTimestamp(),
+          });
         }
-
-        await updateDoc(docRef, {
-          status: newStatus,
-          updatedAt: serverTimestamp(),
-        });
-        toast.success("Bookmark status updated");
+        return snapshot.docs[0].id;
       } else {
-        await addDoc(bookmarksRef, {
-          userID: auth.id, // ✅ Corrected
+        const docRef = await addDoc(bookmarksRef, {
+          userID: auth.id,
           animeId,
           animeTitle,
           thumbnail,
           status: newStatus,
           createdAt: serverTimestamp(),
         });
-        toast.success("Bookmark added");
+        return docRef.id;
       }
     } catch (error) {
       console.error("Error creating/updating bookmark:", error);
       toast.error("Failed to update bookmark");
+      return null;
     }
   };
 
   const syncWatchProgress = async (
-    bookmarkId: string,
-    episodeId: string,
-    episodeNumber: number,
-    current: number,
-    duration: number
-  ) => {
-    if (!auth || !bookmarkId) return;
+    bookmarkId: string | null,
+    watchId: string | null,
+    {
+      episodeId,
+      episodeNumber,
+      current,
+      duration,
+    }: { episodeId: string; episodeNumber: number; current: number; duration: number }
+  ): Promise<string | null> => {
+    if (!auth?.id || !bookmarkId) return null;
 
     try {
       const watchHistoryRef = collection(db, "watchHistory");
-      await addDoc(watchHistoryRef, {
-        bookmarkId,
-        episodeId,
-        episodeNumber,
-        current,
-        duration,
-        createdAt: serverTimestamp(),
-      });
-      toast.success("Watch progress saved");
+      if (!watchId) {
+        const docRef = await addDoc(watchHistoryRef, {
+          bookmarkId,
+          episodeId,
+          episodeNumber,
+          current,
+          duration,
+          createdAt: serverTimestamp(),
+        });
+        return docRef.id;
+      } else {
+        const existingQuery = query(watchHistoryRef, where("bookmarkId", "==", bookmarkId), where("episodeId", "==", episodeId));
+        const snapshot = await getDocs(existingQuery);
+        if (!snapshot.empty) {
+          const docRef = snapshot.docs[0].ref;
+          await updateDoc(docRef, {
+            current,
+            duration,
+            updatedAt: serverTimestamp(),
+          });
+          return snapshot.docs[0].id;
+        }
+      }
     } catch (error) {
       console.error("Error syncing watch progress:", error);
-      toast.error("Failed to save watch progress");
     }
+
+    return null;
   };
 
   return {
