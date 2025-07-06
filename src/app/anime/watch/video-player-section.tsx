@@ -22,10 +22,7 @@ import {
 
 const VideoPlayerSection = () => {
   const { selectedEpisode, anime } = useAnimeStore();
-  
-
-  
-  const { data: serversData, isLoading: serversLoading, error: serversError } = useGetEpisodeServers(selectedEpisode);
+  const { data: serversData } = useGetEpisodeServers(selectedEpisode);
 
   const [serverName, setServerName] = useState<string>("");
   const [key, setKey] = useState<string>("sub");
@@ -35,14 +32,15 @@ const VideoPlayerSection = () => {
     auth?.autoSkip || Boolean(localStorage.getItem("autoSkip")) || false
   );
 
-  useEffect(() => {    
-    if (serversData) {
-      const { serverName } = getFallbackServer(serversData);
-      setServerName(serverName);
-    }
+
+  useEffect(() => {
+    const { serverName } = getFallbackServer(serversData);
+    setServerName(serverName);
+  
   }, [serversData]);
 
-  const { data: episodeData, isLoading: episodeLoading, error: episodeError } = useGetEpisodeData(
+
+  const { data: episodeData, isLoading } = useGetEpisodeData(
     selectedEpisode,
     serverName,
     key
@@ -75,7 +73,7 @@ const VideoPlayerSection = () => {
       try {
         const bookmarkQuery = await getDocs(collection(db, "bookmarks"));
         const bookmarks = bookmarkQuery.docs.filter(
-          (doc) => doc.data().userID === auth.id && doc.data().animeID === anime.anime?.info?.id
+          (doc) => doc.data().userID === auth.id && doc.data().animeID === anime.anime.info.id
         );
 
         let bookmarkRef;
@@ -85,9 +83,9 @@ const VideoPlayerSection = () => {
           bookmarkRef = doc(collection(db, "bookmarks"));
           await setDoc(bookmarkRef, {
             userID: auth.id,
-            animeID: anime.anime?.info?.id,
-            animeTitle: anime.anime?.info?.name,
-            thumbnail: anime.anime?.info?.poster,
+            animeID: anime.anime.info.id,
+            animeTitle: anime.anime.info.name,
+            thumbnail: anime.anime.info.poster,
             status: "watching",
             createdAt: new Date().toISOString(),
           });
@@ -109,95 +107,47 @@ const VideoPlayerSection = () => {
     };
 
     updateWatchHistory();
-  }, [episodeData, selectedEpisode, auth, anime]);
+  }, [episodeData, selectedEpisode, auth]);
+  
+  useEffect(() => {
+    console.log(episodeData);
+  }, [episodeData]);
 
-  // Show loading state when servers are loading or episode is loading
-  if (serversLoading || episodeLoading) {
+
+
+  
+  if (isLoading || !episodeData) {
     return (
-      <div className="h-auto aspect-video lg:max-h-[calc(100vh-150px)] min-h-[20vh] sm:min-h-[30vh] md:min-h-[40vh] lg:min-h-[60vh] w-full animate-pulse bg-slate-700 rounded-md flex items-center justify-center">
-        <div className="text-white">Loading video player...</div>
-      </div>
+      <div className="h-auto aspect-video lg:max-h-[calc(100vh-150px)] min-h-[20vh] sm:min-h-[30vh] md:min-h-[40vh] lg:min-h-[60vh] w-full animate-pulse bg-slate-700 rounded-md"></div>
     );
   }
-
-  // Show error state if servers failed to load
-  if (serversError) {
-    return (
-      <div className="min-h-[40vh] flex flex-col items-center justify-center">
+  return !episodeData?.sources || episodeData.sources.length === 0 ? (
+    <div className="min-h-[40vh] flex flex-col items-center justify-center">
+      <div className="w-full max-w-[728px] mx-auto">
+        <Advertisement position="middle" className="mb-4" />
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>خطأ في تحميل الخوادم</AlertTitle>
+          <AlertTitle>مصدر الفيديو غير متوفر</AlertTitle>
           <AlertDescription>
-            فشل في تحميل قائمة الخوادم. يرجى تحديث الصفحة والمحاولة مرة أخرى.
+            عذراً، الحلقة غير متوفرة حالياً. يرجى المحاولة لاحقاً أو اختيار مصدر آخر.
           </AlertDescription>
         </Alert>
       </div>
-    );
-  }
-
-  // Show error state if episode data failed to load
-  if (episodeError) {
-    return (
-      <div className="min-h-[40vh] flex flex-col items-center justify-center">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>خطأ في تحميل الفيديو</AlertTitle>
-          <AlertDescription>
-            فشل في تحميل بيانات الفيديو. يرجى المحاولة مرة أخرى أو اختيار خادم آخر.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  // Show error if no episode data
-  if (!episodeData) {
-    return (
-      <div className="min-h-[40vh] flex flex-col items-center justify-center">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>لا توجد بيانات للحلقة</AlertTitle>
-          <AlertDescription>
-            لم يتم العثور على بيانات الحلقة. يرجى التحقق من الرابط والمحاولة مرة أخرى.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  // Show error if no sources available
-  if (!episodeData?.sources || episodeData.sources.length === 0) {
-    return (
-      <div className="min-h-[40vh] flex flex-col items-center justify-center">
-        <div className="w-full max-w-[728px] mx-auto">
-          <Advertisement position="middle" className="mb-4" />
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>مصدر الفيديو غير متوفر</AlertTitle>
-            <AlertDescription>
-              عذراً، الحلقة غير متوفرة حالياً. يرجى المحاولة لاحقاً أو اختيار مصدر آخر.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </div>
-    );
-  }
-
-  console.log("VideoPlayerSection - rendering ArbPlayer with src:", episodeData?.sources?.[0].url);
-
-  return (
+    </div>
+  ) : (
     <div className="space-y-4">
       <ArbPlayer
-        src={episodeData?.sources?.[0].url || ""}
+          src={episodeData.sources[0].url}
+          referer={episodeData.headers.Referer}
         posterUrl={anime?.anime?.info?.poster || ""}
         episodeInfo={{
           sub:1,dub:1
 }}
         serversData={serversData!}
         animeInfo={{
-          id: anime.anime?.info?.id || "",
-          title: anime.anime?.info?.name || "",
-          image: anime.anime?.info?.poster || "",
+          id: anime.anime.info.id,
+          title: anime.anime.info.name,
+          image: anime?.anime?.info?.poster||"",
         }}
         onServerChange={changeServer}
         onAutoSkipChange={onHandleAutoSkipChange}

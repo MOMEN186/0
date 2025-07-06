@@ -7,13 +7,20 @@ import { ROUTES } from "@/constants/routes";
 import BlurFade from "./ui/blur-fade";
 import { IAnime } from "@/types/anime";
 import { History } from "lucide-react";
-import useBookMarks, { WatchHistory } from "@/hooks/use-get-bookmark";
+import useFirebaseBookmarks from "@/hooks/use-get-bookmark";
 import { useAuthStore } from "@/store/auth-store";
 
 type Props = {
   loading: boolean;
 };
-
+type WatchHistory = {
+  id: string;
+  episodeId: string;
+  episodeNumber: number;
+  current: number;
+  timestamp: number;
+  created: string;
+};
 interface WatchedAnime extends IAnime {
   episode: WatchHistory | string;
 }
@@ -22,7 +29,7 @@ const ContinueWatching = (props: Props) => {
   const [anime, setAnime] = useState<WatchedAnime[] | null>(null);
 
   const { auth } = useAuthStore();
-  const { bookmarks } = useBookMarks({
+  const { bookmarks } = useFirebaseBookmarks({
     page: 1,
     per_page: 8,
     status: "watching",
@@ -56,8 +63,8 @@ const ContinueWatching = (props: Props) => {
           id: anime.animeId,
           name: anime.animeTitle,
           poster: anime.thumbnail,
-          episode: anime.expand.watchHistory
-            ? anime.expand.watchHistory.sort(
+          episode: anime?.expand?.watchHistory
+            ? anime?.expand?.watchHistory.sort(
                 (a, b) => b.episodeNumber - a.episodeNumber,
               )[0]
             : null,

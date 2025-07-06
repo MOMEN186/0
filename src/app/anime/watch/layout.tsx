@@ -58,11 +58,11 @@ const SelectOptions: ISelectOptions[] = [
 
 const Layout = (props: Props) => {
   const searchParams = useSearchParams();
-  const { setAnime, setSelectedEpisode, selectedEpisode } = useAnimeStore();
+  const { setAnime, setSelectedEpisode } = useAnimeStore();
   const router = useRouter();
 
   const currentAnimeId = searchParams ? searchParams.get("anime") : null;
-  const episodeId = searchParams ? searchParams.get("episode") : null;
+const episodeId = searchParams ? searchParams.get("episode") : null;
   const [animeId, setAnimeId] = useState<string | null>(currentAnimeId);
 
   useEffect(() => {
@@ -71,7 +71,6 @@ const Layout = (props: Props) => {
     }
 
     if (episodeId) {
-      console.log("Layout - setting selectedEpisode:", episodeId);
       setSelectedEpisode(episodeId);
     }
   }, [currentAnimeId, episodeId, animeId, setSelectedEpisode]);
@@ -105,8 +104,8 @@ const Layout = (props: Props) => {
     try {
       await createOrUpdateBookmark(
         currentAnimeId as string,
-        anime?.anime?.info?.name!,
-        anime?.anime?.info?.poster!,
+        anime?.anime.info.name!,
+        anime?.anime.info.poster!,
         value,
       );
     } catch (error) {
@@ -122,17 +121,6 @@ const Layout = (props: Props) => {
 
   if (isLoading) return <Loading />;
 
-  // Convert episodes data to the expected format
-  const episodesData = anime?.anime?.info?.stats?.episodes;
-  const convertedEpisodes = episodesData ? {
-    sub: episodesData.sub || 0,
-    dub: episodesData.dub || 0,
-  } : undefined;
-
-  // Convert aired date to string
-  const airedDate = anime?.anime?.moreInfo?.aired;
-  const airedString = Array.isArray(airedDate) ? airedDate.join(", ") : airedDate;
-
   return (
     <div className="min-h-screen">
       <Container>
@@ -141,17 +129,8 @@ const Layout = (props: Props) => {
           <Advertisement position="top" className="mb-4" />
         </div>
         
-        {/* Player - Only render when episode is selected */}
-        {selectedEpisode ? (
-          props.children
-        ) : (
-          <div className="h-auto aspect-video lg:max-h-[calc(100vh-150px)] min-h-[20vh] sm:min-h-[30vh] md:min-h-[40vh] lg:min-h-[60vh] w-full bg-slate-800 rounded-md flex items-center justify-center">
-            <div className="text-white text-center">
-              <div className="text-xl mb-2">Select an episode to start watching</div>
-              <div className="text-sm text-gray-400">Choose an episode from the playlist below</div>
-            </div>
-          </div>
-        )}
+        {/* Player */}
+        {props.children}
 
         {/* Bottom Advertisement - مركز أفقياً */}
         <div className="w-full flex justify-center">
@@ -159,18 +138,15 @@ const Layout = (props: Props) => {
         </div>
 
         <div className="flex flex-col-reverse md:flex-row gap-4 mt-4">
-          <div className="lg:col-span-3 col-span-1 lg:mb-0">
-            {/* Remove duplicate children render */}
-          </div>
           {episodes && (
             <EpisodePlaylist
               animeId={animeId as string}
               title={
-                !!anime?.anime?.info?.name
+                !!anime?.anime.info.name
                   ? anime.anime.info.name
-                  : (anime?.anime?.moreInfo?.japanese as string)
+                  : (anime?.anime.moreInfo.japanese as string)
               }
-              subOrDub={convertedEpisodes}
+              subOrDub={anime?.anime.info.stats.episodes}
               episodes={episodes}
               isLoading={episodeLoading}
               bookmarks={bookmarks}
@@ -182,7 +158,7 @@ const Layout = (props: Props) => {
             <AnimeCard
               title={anime.anime.info.name || 'Unknown Title'}
               poster={anime.anime.info.poster || '/placeholder-image.jpg'}
-              subTitle={airedString || 'Unknown Date'}
+              subTitle={anime.anime.moreInfo.aired || 'Unknown Date'}
               displayDetails={false}
               className="!h-full !rounded-sm"
               href={ROUTES.ANIME_DETAILS + "/" + anime.anime.info.id}
@@ -198,9 +174,9 @@ const Layout = (props: Props) => {
               onChange={handleSelect}
             />
             <h1 className="text-2xl md:font-black font-extrabold z-[100]">
-              {anime?.anime?.info?.name}
+              {anime?.anime.info.name}
             </h1>
-            <p>{parse(anime?.anime?.info?.description as string)}</p>
+            <p>{parse(anime?.anime.info.description as string)}</p>
           </div>
         </div>
         <AnimeCarousel

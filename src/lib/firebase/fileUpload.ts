@@ -29,8 +29,6 @@ setAuth({
   email: user.email || "",
   displayName: user.displayName || "",
   photoURL: avatarURL,
-  collectionId: auth?.collectionId,
-  collectionName: auth?.collectionName,
   autoSkip: auth?.autoSkip ?? false,
 });
       

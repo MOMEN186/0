@@ -1,19 +1,20 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import Artplayer from "artplayer";
 import Hls from "hls.js";
 import artplayerPluginHlsControl from "artplayer-plugin-hls-control";
 import artplayerPluginAmbilight from "artplayer-plugin-ambilight";
 
 import type { Episodes } from "@/types/anime";
+import { env } from "next-runtime-env";
+
 interface ArbPlayerProps {
-  /** URL of the video stream (e.g., an HLS manifest) */
   src: string;
-  /** URL of the poster image to show before playback */
   posterUrl?: string;
   episodeInfo: Episodes;
-  serversData: Record<string, any>;
+  serversData: any;
+  referer: string;
   animeInfo: { id: string; title: string; image: string };
   onServerChange: (serverName: string, key: string) => void;
   onAutoSkipChange: (value: boolean) => Promise<void>;
@@ -25,158 +26,69 @@ const ArbPlayer: React.FC<ArbPlayerProps> = ({
   src,
   posterUrl,
   className,
+  referer,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [player, setPlayer] = useState<Artplayer | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const playerRef = useRef<Artplayer | null>(null);
   const hlsRef = useRef<Hls | null>(null);
 
-  console.log("ArbPlayer - props:", { src, posterUrl, className });
-
   useEffect(() => {
-    console.log("ArbPlayer - useEffect triggered with src:", src);
-    if (!containerRef.current || !src) {
-      console.log("ArbPlayer - early return:", { hasContainer: !!containerRef.current, hasSrc: !!src });
-      return;
-    }
+    // Cleanup previous instances
+    playerRef.current?.destroy();
+    hlsRef.current?.destroy();
+    if (containerRef.current) containerRef.current.innerHTML = '';
 
-    setIsLoading(true);
-    setError(null);
+    if (!src || !containerRef.current) return;
 
-    console.log("ArbPlayer - cleaning up existing instances");
-    // Cleanup existing instances
-    if (player) {
-      player.destroy();
-      setPlayer(null);
-    }
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
+    // Build proxied URL
+    const baseURI = `${env("NEXT_PUBLIC_PROXY_URL")}/m3u8-proxy`;
+    const proxiedSrc = `${baseURI}?url=${encodeURIComponent(src)}&referer=${encodeURIComponent(referer)}`;
 
-    // Build options for Artplayer
-    const options = {
+    // Initialize Artplayer without HLS-control plugin yet
+    const art = new Artplayer({
       container: containerRef.current,
-      url: src,
+      url: proxiedSrc,
       poster: posterUrl,
       autoplay: false,
-      flip: false,
-      loop: false,
       plugins: [
-        artplayerPluginHlsControl({}),
-        artplayerPluginAmbilight({
-          blur: "10px",
-          opacity: 0.5,
-          frequency: 100,
-          zIndex: 1,
-          duration: 1000,
-        }),
+        artplayerPluginAmbilight({ blur: '10px', opacity: 0.5, frequency: 100, zIndex: 1, duration: 1000 }),
       ],
-    };
+    });
+    playerRef.current = art;
 
-    console.log("ArbPlayer - creating ArtPlayer with options:", options);
+    if (Hls.isSupported()) {
+      // Setup Hls.js manually
+      const hls = new Hls();
+      hlsRef.current = hls;
+      hls.loadSource(proxiedSrc);
+      hls.attachMedia(art.video as HTMLVideoElement);
 
-    try {
-      const art = new Artplayer(options);
-      console.log("ArbPlayer - ArtPlayer created successfully");
-      setPlayer(art);
+      // Expose Hls.js on the Artplayer instance
+      (art as any).hls = hls;
+      // Now install HLS-control plugin via `use` (not installPlugin)
+      // Install HLS-control plugin by invoking it with the Artplayer instance
+      const hlsControl = artplayerPluginHlsControl({});
+      hlsControl(art);
 
-      if (Hls.isSupported()) {
-        console.log("ArbPlayer - HLS is supported, creating HLS instance");
-        const hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-        });
-        hlsRef.current = hls;
-        
-        console.log("ArbPlayer - loading HLS source:", src);
-        hls.loadSource(src);
-        hls.attachMedia(art.video as HTMLVideoElement);
-        
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          console.log("ArbPlayer - HLS manifest parsed successfully");
-          setIsLoading(false);
-          art.play();
-        });
-
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          console.error("ArbPlayer - HLS error:", data);
-          setError("Failed to load video stream");
-          setIsLoading(false);
-        });
-      } else {
-        console.log("ArbPlayer - HLS not supported, using fallback");
-        // Fallback for browsers that don't support HLS
-        art.on("video:loadedmetadata", () => {
-          console.log("ArbPlayer - Video metadata loaded");
-          setIsLoading(false);
-        });
-        
-        art.on("video:error", () => {
-          console.error("ArbPlayer - Video error");
-          setError("Failed to load video");
-          setIsLoading(false);
-        });
-
-        art.on("video:canplay", () => {
-          console.log("ArbPlayer - Video can play");
-        });
-        
-        art.play();
-      }
-
-      return () => {
-        console.log("ArbPlayer - cleanup function called");
-        art.destroy();
-        hlsRef.current?.destroy();
-      };
-    } catch (err) {
-      console.error("ArbPlayer - Error creating ArtPlayer:", err);
-      setError("Failed to initialize video player");
-      setIsLoading(false);
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        console.error('HLS.js error', data);
+      });
+    } else {
+      // Fallback for native HLS support
+      art.video.src = proxiedSrc;
     }
-  }, [src, posterUrl]);
 
-  console.log("ArbPlayer - render state:", { isLoading, error, hasSrc: !!src });
+    return () => {
+      art.destroy();
+      hlsRef.current?.destroy();
+    };
+  }, [src, posterUrl, referer]);
 
   if (!src) {
-    return (
-      <div className={`${className} flex items-center justify-center bg-slate-800 text-white`}>
-        <div>No video source available</div>
-      </div>
-    );
+    return <div className={className}>Loading video…</div>;
   }
 
-  if (error) {
-    return (
-      <div className={`${className} flex items-center justify-center bg-slate-800 text-white`}>
-        <div className="text-center">
-          <div className="text-red-400 mb-2">Error loading video</div>
-          <div className="text-sm text-gray-400">{error}</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className={`${className} flex items-center justify-center bg-slate-800 text-white`}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-          <div>Loading video...</div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      className={className}
-      style={{ width: "100%", height: "100%" }}
-    />
-  );
+  return <div ref={containerRef} className={className} style={{ width: '100%', height: '100%' }} />;
 };
 
 export default ArbPlayer;

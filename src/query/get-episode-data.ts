@@ -11,7 +11,7 @@ const getEpisodeData = async (
   console.log(
     "getEpisodeData",
     { episodeId, server, subOrDub },);
-  console.log("decodeURIComponent(episodeId)", decodeURIComponent(episodeId));
+  // console.log("decodeURIComponent(episodeId)", decodeURIComponent(episodeId));
   try {
     const res = await api.get("/api/episode/sources", {
       params: {
@@ -20,11 +20,10 @@ const getEpisodeData = async (
         category: subOrDub,
       },
     });
-    console.log("res.data.data", res.data.data);
+    // console.log("res.data.data", res.data.data);
     return res.data.data as IEpisodeSource;
   } catch (e) {
-    console.error("getEpisodeData error:", e);
-    throw e; // Re-throw the error so React Query can handle it
+    console.log(e);
   }
 };
 
@@ -35,10 +34,8 @@ export const useGetEpisodeData = (
 ) => {
   return useQuery({
     queryFn: () => getEpisodeData(episodeId, server, subOrDub),
-    queryKey: [GET_EPISODE_DATA, episodeId, server, subOrDub],
+    queryKey: [GET_EPISODE_DATA, episodeId, subOrDub],
     refetchOnWindowFocus: false,
-    enabled: !!episodeId && !!server && server !== "",
-    retry: 2,
-    retryDelay: 1000,
+    enabled: server !== "",
   });
 };
