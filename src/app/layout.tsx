@@ -10,6 +10,8 @@ import ThemeProvider  from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import ClientOnly from "@/components/ClientOnly";
 import FirebaseAuthProvider from "@/providers/fireBaseAuthProvider";
+import 'artplayer';                // brings in default skin via JS
+
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",

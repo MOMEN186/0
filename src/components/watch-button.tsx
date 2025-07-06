@@ -21,6 +21,8 @@ const animeId = pathName.split("/")[2] || "";
 
 
   return (
+    <>
+    
     <ButtonLink
       href={
         !hasWatchedAnime
@@ -31,7 +33,8 @@ const animeId = pathName.split("/")[2] || "";
       LeftIcon={CirclePlay}
     >
       {hasWatchedAnime ? "Continue Watching" : "Start Watching"}
-    </ButtonLink>
+      </ButtonLink>
+      </>
   );
 };
 

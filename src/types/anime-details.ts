@@ -1,10 +1,75 @@
 export interface IAnimeDetails {
-  id: string;
-  title: string;
-  info: {
-    poster: string;
+  anime: {
+    info: {
+      id: string;
+      anilistId: number | null;
+      malId: number | null;
+      name: string | null;
+      poster: string | null;
+      description: string | null;
+      stats: {
+        rating: string | null;
+        quality: string | null;
+        episodes: {
+          sub: number | null;
+          dub: number | null;
+        };
+        type: string | null;
+        duration: string | null;
+      };
+      promotionalVideos: {
+        title: string | undefined;
+        source: string | undefined;
+        thumbnail: string | undefined;
+      }[];
+      charactersVoiceActors: any[];
+    };
+    moreInfo: Record<string, string | string[]>;
   };
-  episodes: Episode[]; // renamed to avoid confusion
+  seasons: {
+    id: string | null;
+    name: string | null;
+    title: string | null;
+    poster: string | null;
+    isCurrent: boolean;
+  }[];
+  mostPopularAnimes: {
+    id: string;
+    name: string;
+    jname: string;
+    poster: string;
+    episodes: {
+      sub: number | null;
+      dub: number | null;
+    };
+    type: string;
+  }[];
+  relatedAnimes: {
+    id: string;
+    name: string;
+    jname: string;
+    poster: string;
+    duration: string;
+    type: string;
+    rating: string;
+    episodes: {
+      sub: number | null;
+      dub: number | null;
+    };
+  }[];
+  recommendedAnimes: {
+    id: string;
+    name: string;
+    jname: string;
+    poster: string;
+    duration: string;
+    type: string;
+    rating?: string;
+    episodes: {
+      sub: number | null;
+      dub: number | null;
+    };
+  }[];
 }
 
 export interface Season {

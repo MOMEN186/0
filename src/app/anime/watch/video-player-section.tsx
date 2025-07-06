@@ -10,36 +10,44 @@ import { useGetEpisodeServers } from "@/query/get-episode-servers";
 import { useAuthStore } from "@/store/auth-store";
 import Advertisement from "@/components/ads";
 import { getFallbackServer } from "@/utils/video";
-import { IWatchedAnime } from "@/types";
-import { pb } from "@/lib/database";
+import { db } from "@/lib/firebase/firebase";
+import {
+  doc,
+  updateDoc,
+  getDoc,
+  setDoc,
+  collection,
+  getDocs,
+} from "firebase/firestore";
 
 const VideoPlayerSection = () => {
   const { selectedEpisode, anime } = useAnimeStore();
-  const { data: serversData } = useGetEpisodeServers(selectedEpisode);
+  
+
+  
+  const { data: serversData, isLoading: serversLoading, error: serversError } = useGetEpisodeServers(selectedEpisode);
 
   const [serverName, setServerName] = useState<string>("");
-  const [key, setKey] = useState<string>("");
+  const [key, setKey] = useState<string>("sub");
 
   const { auth, setAuth } = useAuthStore();
   const [autoSkip, setAutoSkip] = useState<boolean>(
-    auth?.autoSkip || Boolean(localStorage.getItem("autoSkip")) || false,
+    auth?.autoSkip || Boolean(localStorage.getItem("autoSkip")) || false
   );
 
-  useEffect(() => {
-    const { serverName, key } = getFallbackServer(serversData);
-    setServerName(serverName);
-    setKey(key);
+  useEffect(() => {    
+    if (serversData) {
+      const { serverName } = getFallbackServer(serversData);
+      setServerName(serverName);
+    }
   }, [serversData]);
 
-  const { data: episodeData, isLoading } = useGetEpisodeData(
+  const { data: episodeData, isLoading: episodeLoading, error: episodeError } = useGetEpisodeData(
     selectedEpisode,
     serverName,
-    key,
+    key
   );
 
-  const [watchedDetails, setWatchedDetails] = useState<Array<IWatchedAnime>>(
-    JSON.parse(localStorage.getItem("watched") as string) || [],
-  );
 
   function changeServer(serverName: string, key: string) {
     setServerName(serverName);
@@ -54,99 +62,142 @@ const VideoPlayerSection = () => {
       localStorage.setItem("autoSkip", JSON.stringify(value));
       return;
     }
-    const res = await pb.collection("users").update(auth.id, {
-      autoSkip: value,
-    });
-    if (res) {
-      setAuth({ ...auth, autoSkip: value });
-    }
+
+    const userRef = doc(db, "users", auth.id);
+    await updateDoc(userRef, { autoSkip: value });
+    setAuth({ ...auth, autoSkip: value });
   }
 
-  useEffect(() => {
-    if (auth) return;
-    if (!Array.isArray(watchedDetails)) {
-      localStorage.removeItem("watched");
-      return;
-    }
+  useEffect(() => {    
+    if (!auth || !episodeData) return;
 
-    if (episodeData) {
-      const existingAnime = watchedDetails.find(
-        (watchedAnime) => watchedAnime.anime.id === anime.id,
-      );
+    const updateWatchHistory = async () => {
+      try {
+        const bookmarkQuery = await getDocs(collection(db, "bookmarks"));
+        const bookmarks = bookmarkQuery.docs.filter(
+          (doc) => doc.data().userID === auth.id && doc.data().animeID === anime.anime?.info?.id
+        );
 
-      if (!existingAnime) {
-        const updatedWatchedDetails = [
-          ...watchedDetails,
-          {
-            anime: {
-              id: anime.id,
-              title: anime.title,
-              poster: anime.info.poster,
-            },
-            episodes: [selectedEpisode],
-          },
-        ];
-        localStorage.setItem("watched", JSON.stringify(updatedWatchedDetails));
-        setWatchedDetails(updatedWatchedDetails);
-      } else {
-        const episodeAlreadyWatched =
-          existingAnime.episodes.includes(selectedEpisode);
-
-        if (!episodeAlreadyWatched) {
-          const updatedWatchedDetails = watchedDetails.map((watchedAnime) =>
-            watchedAnime.anime.id === anime.id
-              ? {
-                  ...watchedAnime,
-                  episodes: [...watchedAnime.episodes, selectedEpisode],
-                }
-              : watchedAnime,
-          );
-          localStorage.setItem(
-            "watched",
-            JSON.stringify(updatedWatchedDetails),
-          );
-          setWatchedDetails(updatedWatchedDetails);
+        let bookmarkRef;
+        if (bookmarks.length > 0) {
+          bookmarkRef = doc(db, "bookmarks", bookmarks[0].id);
+        } else {
+          bookmarkRef = doc(collection(db, "bookmarks"));
+          await setDoc(bookmarkRef, {
+            userID: auth.id,
+            animeID: anime.anime?.info?.id,
+            animeTitle: anime.anime?.info?.name,
+            thumbnail: anime.anime?.info?.poster,
+            status: "watching",
+            createdAt: new Date().toISOString(),
+          });
         }
+
+        const bookmarkData = (await getDoc(bookmarkRef)).data();
+        const history = Array.isArray(bookmarkData?.watchHistory)
+          ? [...bookmarkData.watchHistory]
+          : [];
+
+        const historyEntry = `${selectedEpisode}`;
+        if (!history.includes(historyEntry)) {
+          history.push(historyEntry);
+          await updateDoc(bookmarkRef, { watchHistory: history });
+        }
+      } catch (error) {
+        console.error("Error saving watch history:", error);
       }
-    }
-  }, [episodeData, selectedEpisode, auth]);
+    };
 
-  const episode = anime.episodes?.find((ep) => ep.id === selectedEpisode);
+    updateWatchHistory();
+  }, [episodeData, selectedEpisode, auth, anime]);
 
-  if (isLoading || !episodeData) {
+  // Show loading state when servers are loading or episode is loading
+  if (serversLoading || episodeLoading) {
     return (
-      <div className="h-auto aspect-video lg:max-h-[calc(100vh-150px)] min-h-[20vh] sm:min-h-[30vh] md:min-h-[40vh] lg:min-h-[60vh] w-full animate-pulse bg-slate-700 rounded-md"></div>
+      <div className="h-auto aspect-video lg:max-h-[calc(100vh-150px)] min-h-[20vh] sm:min-h-[30vh] md:min-h-[40vh] lg:min-h-[60vh] w-full animate-pulse bg-slate-700 rounded-md flex items-center justify-center">
+        <div className="text-white">Loading video player...</div>
+      </div>
     );
   }
 
-  if (!episode) {
-    return <div>Episode not found</div>;
-  }
-
-  return !episodeData?.sources || episodeData.sources.length === 0 ? (
-    <div className="min-h-[40vh] flex flex-col items-center justify-center">
-      <div className="w-full max-w-[728px] mx-auto">
-        <Advertisement position="middle" className="mb-4" />
+  // Show error state if servers failed to load
+  if (serversError) {
+    return (
+      <div className="min-h-[40vh] flex flex-col items-center justify-center">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>مصدر الفيديو غير متوفر</AlertTitle>
+          <AlertTitle>خطأ في تحميل الخوادم</AlertTitle>
           <AlertDescription>
-            عذراً، الحلقة غير متوفرة حالياً. يرجى المحاولة لاحقاً أو اختيار مصدر آخر.
+            فشل في تحميل قائمة الخوادم. يرجى تحديث الصفحة والمحاولة مرة أخرى.
           </AlertDescription>
         </Alert>
       </div>
-    </div>
-  ) : (
+    );
+  }
+
+  // Show error state if episode data failed to load
+  if (episodeError) {
+    return (
+      <div className="min-h-[40vh] flex flex-col items-center justify-center">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>خطأ في تحميل الفيديو</AlertTitle>
+          <AlertDescription>
+            فشل في تحميل بيانات الفيديو. يرجى المحاولة مرة أخرى أو اختيار خادم آخر.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Show error if no episode data
+  if (!episodeData) {
+    return (
+      <div className="min-h-[40vh] flex flex-col items-center justify-center">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>لا توجد بيانات للحلقة</AlertTitle>
+          <AlertDescription>
+            لم يتم العثور على بيانات الحلقة. يرجى التحقق من الرابط والمحاولة مرة أخرى.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Show error if no sources available
+  if (!episodeData?.sources || episodeData.sources.length === 0) {
+    return (
+      <div className="min-h-[40vh] flex flex-col items-center justify-center">
+        <div className="w-full max-w-[728px] mx-auto">
+          <Advertisement position="middle" className="mb-4" />
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>مصدر الفيديو غير متوفر</AlertTitle>
+            <AlertDescription>
+              عذراً، الحلقة غير متوفرة حالياً. يرجى المحاولة لاحقاً أو اختيار مصدر آخر.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
+  console.log("VideoPlayerSection - rendering ArbPlayer with src:", episodeData?.sources?.[0].url);
+
+  return (
     <div className="space-y-4">
       <ArbPlayer
         src={episodeData?.sources?.[0].url || ""}
-        posterUrl={anime.info.poster || ""}
-        episodeInfo={episode}
+        posterUrl={anime?.anime?.info?.poster || ""}
+        episodeInfo={{
+          sub:1,dub:1
+}}
         serversData={serversData!}
         animeInfo={{
-          id: anime.id,
-          title: anime.title,
-          image: anime.info.poster,
+          id: anime.anime?.info?.id || "",
+          title: anime.anime?.info?.name || "",
+          image: anime.anime?.info?.poster || "",
         }}
         onServerChange={changeServer}
         onAutoSkipChange={onHandleAutoSkipChange}

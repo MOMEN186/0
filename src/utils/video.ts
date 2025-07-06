@@ -1,15 +1,16 @@
 export function getFallbackServer(serversData: any) {
-  if (!serversData || !Array.isArray(serversData)) {
-    return { serverName: '', key: '' };
+  if (!serversData || !Array.isArray(serversData.sub)) {
+    return { serverName: "", key: "" };
   }
+  const defaultServer = serversData.sub[0];
+  console.log(defaultServer);
 
-  const defaultServer = serversData[0];
   if (!defaultServer) {
-    return { serverName: '', key: '' };
+    return { serverName: "", key: "" };
   }
 
   return {
-    serverName: defaultServer.name || '',
-    key: defaultServer.data || ''
+    serverName: defaultServer.serverName || "",
+    key: defaultServer.serverId.toString() || "",
   };
 }
