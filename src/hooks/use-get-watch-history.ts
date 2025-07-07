@@ -9,7 +9,7 @@ export interface WatchHistoryEntry {
   episodeNumber: number;
   current: number;
   timestamp: number;
-  created: Timestamp | string; // Can be either Firestore Timestamp or ISO string
+  created: Timestamp | string;
 }
 
 export function useWatchHistory() {
@@ -29,18 +29,16 @@ export function useWatchHistory() {
         setIsLoading(true);
         setError(null);
 
-        // First, get all bookmarks for the user
         const bookmarksQuery = query(
           collection(db, "bookmarks"),
           where("userId", "==", auth.id)
         );
         const bookmarksSnapshot = await getDocs(bookmarksQuery);
-        
-        // Collect all watch history IDs from bookmarks
+
         const watchHistoryIds: string[] = [];
         bookmarksSnapshot.forEach((doc) => {
           const data = doc.data();
-          if (data.watchHistory && Array.isArray(data.watchHistory)) {
+          if (Array.isArray(data.watchHistory)) {
             watchHistoryIds.push(...data.watchHistory);
           }
         });
@@ -51,8 +49,6 @@ export function useWatchHistory() {
           return;
         }
 
-        // Fetch watch history entries
-        // Note: Firestore 'in' queries are limited to 10 items, so we might need to batch
         const batchSize = 10;
         const allWatchHistory: WatchHistoryEntry[] = [];
 
@@ -62,7 +58,7 @@ export function useWatchHistory() {
             collection(db, "watchHistory"),
             where("__name__", "in", batch)
           );
-          
+
           const watchHistorySnapshot = await getDocs(watchHistoryQuery);
           watchHistorySnapshot.forEach((doc) => {
             allWatchHistory.push({
@@ -72,14 +68,9 @@ export function useWatchHistory() {
           });
         }
 
-        // Sort by creation date (newest first)
         allWatchHistory.sort((a, b) => {
-          const dateA = typeof a.created === "string" 
-            ? new Date(a.created) 
-            : a.created.toDate();
-          const dateB = typeof b.created === "string" 
-            ? new Date(b.created) 
-            : b.created.toDate();
+          const dateA = typeof a.created === "string" ? new Date(a.created) : a.created.toDate();
+          const dateB = typeof b.created === "string" ? new Date(b.created) : b.created.toDate();
           return dateB.getTime() - dateA.getTime();
         });
 

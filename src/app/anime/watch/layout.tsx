@@ -138,9 +138,6 @@ const episodeId = searchParams ? searchParams.get("episode") : null;
         </div>
 
         <div className="flex flex-col-reverse md:flex-row gap-4 mt-4">
-          <div className="lg:col-span-3 col-span-1 lg:mb-0">
-            {props.children}
-          </div>
           {episodes && (
             <EpisodePlaylist
               animeId={animeId as string}

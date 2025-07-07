@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     );
     return Response.json({ data });
   } catch (err) {
-    console.log(err);
+    console.log("error", err);
     return Response.json({ error: "something went wrong" }, { status: 500 });
   }
 }

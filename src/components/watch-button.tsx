@@ -6,17 +6,23 @@ import { ROUTES } from "@/constants/routes";
 
 import { usePathname } from "next/navigation";
 import { ButtonLink } from "./common/button-link";
-import { useHasAnimeWatched } from "@/hooks/use-is-anime-watched";
+import { useWatchHistory } from "@/hooks/use-get-watch-history";
 
 import { useGetLastEpisodeWatched } from "@/hooks/use-get-last-episode-watched";
 
 const WatchButton = () => {
   const pathName = usePathname() ?? "";  
 const animeId = pathName.split("/")[2] || "";
-  const { hasWatchedAnime } = useHasAnimeWatched(animeId);
+  const { watchHistory } = useWatchHistory();
   const latestEpisodeWatched = useGetLastEpisodeWatched(animeId);
+  const hasWatchedAnime = watchHistory.some(
+    (episode) => episode.id === animeId
+  );
+
 
   return (
+    <>
+    
     <ButtonLink
       href={
         !hasWatchedAnime
@@ -27,7 +33,8 @@ const animeId = pathName.split("/")[2] || "";
       LeftIcon={CirclePlay}
     >
       {hasWatchedAnime ? "Continue Watching" : "Start Watching"}
-    </ButtonLink>
+      </ButtonLink>
+      </>
   );
 };
 
