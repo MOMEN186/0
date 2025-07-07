@@ -8,9 +8,9 @@ const getEpisodeData = async (
   server: string | undefined,
   subOrDub: string
 ) => {
-  console.log(
-    "getEpisodeData",
-    { episodeId, server, subOrDub },);
+  // console.log(
+  //   "getEpisodeData",
+  //   { episodeId, server, subOrDub },);
   // console.log("decodeURIComponent(episodeId)", decodeURIComponent(episodeId));
   try {
     const res = await api.get("/api/episode/sources", {

@@ -134,7 +134,7 @@ function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
     if (!auth?.id) return null;
 
     try {
-      const bookmarksRef = collection(db, "bookmark");
+      const bookmarksRef = collection(db, "bookmarks");
       const q = query(bookmarksRef, where("userID", "==", auth.id), where("animeID", "==", animeId));
       const snapshot = await getDocs(q);
 

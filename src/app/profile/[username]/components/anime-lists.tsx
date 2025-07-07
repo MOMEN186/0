@@ -2,7 +2,7 @@ import AnimeCard from "@/components/anime-card";
 import Pagination from "@/components/common/pagination";
 import { ROUTES } from "@/constants/routes";
 import useFirebaseBookmarks from "@/hooks/use-get-bookmark";
-import React from "react";
+import React, { useEffect } from "react";
 
 type Props = {
   status: string;
@@ -17,6 +17,7 @@ function AnimeLists(props: Props) {
     per_page: 8,
   });
 
+s
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       setPage((prevPage) => prevPage + 1);
