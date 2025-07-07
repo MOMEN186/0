@@ -19,7 +19,7 @@ function ProfilePage() {
 
   const [user, setUser] = useState<ReturnType<typeof getAuth>["currentUser"] | null>(null);
   const [loading, setLoading] = useState(true); // ✅ add loading state
-
+  useEffect(() => { console.log(user) }, [user]);
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (u) => {

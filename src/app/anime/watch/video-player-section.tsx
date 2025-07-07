@@ -109,12 +109,6 @@ const VideoPlayerSection = () => {
     updateWatchHistory();
   }, [episodeData, selectedEpisode, auth]);
   
-  useEffect(() => {
-    console.log(episodeData);
-  }, [episodeData]);
-
-
-
   
   if (isLoading || !episodeData) {
     return (

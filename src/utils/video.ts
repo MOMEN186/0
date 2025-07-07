@@ -24,7 +24,6 @@ export function getFallbackServer(serversData: any): { serverName: string; key: 
   }
   
   const defaultServer = serversData.sub[0];
-  console.log(defaultServer);
 
   if (!defaultServer) {
     return { serverName: "", key: "" };
@@ -131,7 +130,7 @@ export class VideoErrorHandler {
     
     if (this.retryCount < this.maxRetries) {
       this.retryCount++;
-      console.log(`Retrying... (${this.retryCount}/${this.maxRetries})`);
+      // console.log(`Retrying... (${this.retryCount}/${this.maxRetries})`);
       
       await new Promise(resolve => setTimeout(resolve, this.retryDelay));
       await retryCallback();
