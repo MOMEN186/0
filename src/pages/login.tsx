@@ -1,4 +1,4 @@
-import { signIn } from "next-auth/react";
+import { signInWithGoogle } from "@/lib/firebase/auth";
 
 export default function Login() {
   return (
@@ -6,7 +6,7 @@ export default function Login() {
       <h1>تسجيل الدخول</h1>
       <button
         style={{ padding: '10px 20px', marginTop: 20, background: '#4285F4', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
-        onClick={() => signIn('google')}
+        onClick={() => signInWithGoogle}
       >
         تسجيل الدخول باستخدام Google
       </button>

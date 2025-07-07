@@ -29,7 +29,7 @@ import Loading from "@/app/loading";
 import { useAuthStore } from "@/store/auth-store";
 import { toast } from "sonner";
 import Advertisement from "@/components/ads";
-import useBookMarks from "@/hooks/use-get-bookmark";
+import useFirebaseBookmarks from "@/hooks/use-get-bookmark";
 import { useGetAnimeBanner } from "@/query/get-banner-anime";
 
 const SelectOptions: ISelectOptions[] = [
@@ -61,11 +61,11 @@ const SelectOptions: ISelectOptions[] = [
 ];
 
 const Page = () => {
-  const { slug } = useParams();
-  const { data: anime, isLoading } = useGetAnimeDetails(slug as string);
+  const { slug } = useParams() as { slug: string };
+    const { data: anime, isLoading } = useGetAnimeDetails(slug as string);
   const { auth } = useAuthStore();
-  const { bookmarks, createOrUpdateBookMark } = useBookMarks({
-    animeID: slug as string,
+  const { bookmarks, createOrUpdateBookmark } = useFirebaseBookmarks({
+    animeId: slug as string,
     page: 1,
     per_page: 1,
   });
@@ -83,7 +83,7 @@ const Page = () => {
     setSelected(value);
 
     try {
-      await createOrUpdateBookMark(
+      await createOrUpdateBookmark(
         slug as string,
         anime?.anime.info.name!,
         anime?.anime.info.poster!,
@@ -109,15 +109,15 @@ const Page = () => {
             {/* Anime Details */}
             <div className="relative">
               <div className="h-[30vh] md:h-[40vh] w-full relative ">
-                {bannerLoading ? (
-                  <div className="absolute inset-0 m-auto w-full h-full bg-slate-900 animate-pulse"></div>
-                ) : (
-                  <Image
-                    src={
-                      (banner?.Media.bannerImage as string) ||
-                      anime.anime.info.poster
+                  {bannerLoading ? (
+                    <div className="absolute inset-0 m-auto w-full h-full bg-slate-900 animate-pulse"></div>
+                  ) : (
+                    <Image
+                      src={
+                        (banner?.Media.bannerImage as string) ||
+                        anime.anime.info.poster ||""
                     }
-                    alt={anime.anime.info.name}
+                    alt={anime.anime.info.name|| ""}
                     height={100}
                     width={100}
                     className="h-full w-full object-cover"
@@ -126,15 +126,15 @@ const Page = () => {
                 )}
 
                 <WatchTrailer
-                  videoHref={anime.anime.info.promotionalVideos[0]?.source}
+                  videoHref={anime.anime.info.promotionalVideos[0]?.source ||""}
                 />
                 <div className="absolute h-full w-full inset-0 m-auto bg-gradient-to-r from-slate-900 to-transparent"></div>
               </div>
               <Container className="z-50 md:space-y-10 pb-20">
                 <div className="flex md:mt-[-9.375rem] mt-[-6.25rem] md:flex-row flex-col md:items-end md:gap-20 gap-10 ">
                   <AnimeCard
-                    title={anime.anime.info.name}
-                    poster={anime.anime.info.poster}
+                    title={anime.anime.info.name || ""}
+                    poster={anime.anime.info.poster || ""}
                     href={`${ROUTES.ANIME_DETAILS}/${anime.anime.info.id}`}
                     displayDetails={false}
                     variant="lg"
@@ -239,9 +239,9 @@ const Page = () => {
                           !relation.isCurrent && (
                             <AnimeCard
                               key={idx}
-                              title={relation.name}
-                              subTitle={relation.title}
-                              poster={relation.poster}
+                              title={relation.name ||""}
+                              subTitle={relation.title ||""}
+                              poster={relation.poster ||""}
                               className="self-center justify-self-center"
                               href={`${ROUTES.ANIME_DETAILS}/${relation.id}`}
                             />

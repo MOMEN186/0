@@ -10,36 +10,42 @@ import { useGetEpisodeServers } from "@/query/get-episode-servers";
 import { useAuthStore } from "@/store/auth-store";
 import Advertisement from "@/components/ads";
 import { getFallbackServer } from "@/utils/video";
-import { IWatchedAnime } from "@/types";
-import { pb } from "@/lib/database";
+import { db } from "@/lib/firebase/firebase";
+import {
+  doc,
+  updateDoc,
+  getDoc,
+  setDoc,
+  collection,
+  getDocs,
+} from "firebase/firestore";
 
 const VideoPlayerSection = () => {
   const { selectedEpisode, anime } = useAnimeStore();
   const { data: serversData } = useGetEpisodeServers(selectedEpisode);
 
   const [serverName, setServerName] = useState<string>("");
-  const [key, setKey] = useState<string>("");
+  const [key, setKey] = useState<string>("sub");
 
   const { auth, setAuth } = useAuthStore();
   const [autoSkip, setAutoSkip] = useState<boolean>(
-    auth?.autoSkip || Boolean(localStorage.getItem("autoSkip")) || false,
+    auth?.autoSkip || Boolean(localStorage.getItem("autoSkip")) || false
   );
 
+
   useEffect(() => {
-    const { serverName, key } = getFallbackServer(serversData);
+    const { serverName } = getFallbackServer(serversData);
     setServerName(serverName);
-    setKey(key);
+  
   }, [serversData]);
+
 
   const { data: episodeData, isLoading } = useGetEpisodeData(
     selectedEpisode,
     serverName,
-    key,
+    key
   );
 
-  const [watchedDetails, setWatchedDetails] = useState<Array<IWatchedAnime>>(
-    JSON.parse(localStorage.getItem("watched") as string) || [],
-  );
 
   function changeServer(serverName: string, key: string) {
     setServerName(serverName);
@@ -54,73 +60,61 @@ const VideoPlayerSection = () => {
       localStorage.setItem("autoSkip", JSON.stringify(value));
       return;
     }
-    const res = await pb.collection("users").update(auth.id, {
-      autoSkip: value,
-    });
-    if (res) {
-      setAuth({ ...auth, autoSkip: value });
-    }
+
+    const userRef = doc(db, "users", auth.id);
+    await updateDoc(userRef, { autoSkip: value });
+    setAuth({ ...auth, autoSkip: value });
   }
 
-  useEffect(() => {
-    if (auth) return;
-    if (!Array.isArray(watchedDetails)) {
-      localStorage.removeItem("watched");
-      return;
-    }
+  useEffect(() => {    
+    if (!auth || !episodeData) return;
 
-    if (episodeData) {
-      const existingAnime = watchedDetails.find(
-        (watchedAnime) => watchedAnime.anime.id === anime.anime.info.id,
-      );
+    const updateWatchHistory = async () => {
+      try {
+        const bookmarkQuery = await getDocs(collection(db, "bookmarks"));
+        const bookmarks = bookmarkQuery.docs.filter(
+          (doc) => doc.data().userID === auth.id && doc.data().animeID === anime.anime.info.id
+        );
 
-      if (!existingAnime) {
-        // Add new anime entry if it doesn't exist
-        const updatedWatchedDetails = [
-          ...watchedDetails,
-          {
-            anime: {
-              id: anime.anime.info.id,
-              title: anime.anime.info.name,
-              poster: anime.anime.info.poster,
-            },
-            episodes: [selectedEpisode],
-          },
-        ];
-        localStorage.setItem("watched", JSON.stringify(updatedWatchedDetails));
-        setWatchedDetails(updatedWatchedDetails);
-      } else {
-        // Update the existing anime entry
-        const episodeAlreadyWatched =
-          existingAnime.episodes.includes(selectedEpisode);
-
-        if (!episodeAlreadyWatched) {
-          // Add the new episode to the list
-          const updatedWatchedDetails = watchedDetails.map((watchedAnime) =>
-            watchedAnime.anime.id === anime.anime.info.id
-              ? {
-                  ...watchedAnime,
-                  episodes: [...watchedAnime.episodes, selectedEpisode],
-                }
-              : watchedAnime,
-          );
-
-          localStorage.setItem(
-            "watched",
-            JSON.stringify(updatedWatchedDetails),
-          );
-          setWatchedDetails(updatedWatchedDetails);
+        let bookmarkRef;
+        if (bookmarks.length > 0) {
+          bookmarkRef = doc(db, "bookmarks", bookmarks[0].id);
+        } else {
+          bookmarkRef = doc(collection(db, "bookmarks"));
+          await setDoc(bookmarkRef, {
+            userID: auth.id,
+            animeID: anime.anime.info.id,
+            animeTitle: anime.anime.info.name,
+            thumbnail: anime.anime.info.poster,
+            status: "watching",
+            createdAt: new Date().toISOString(),
+          });
         }
-      }
-    }
-    //eslint-disable-next-line
-  }, [episodeData, selectedEpisode, auth]);
 
-  if (isLoading || !episodeData)
+        const bookmarkData = (await getDoc(bookmarkRef)).data();
+        const history = Array.isArray(bookmarkData?.watchHistory)
+          ? [...bookmarkData.watchHistory]
+          : [];
+
+        const historyEntry = `${selectedEpisode}`;
+        if (!history.includes(historyEntry)) {
+          history.push(historyEntry);
+          await updateDoc(bookmarkRef, { watchHistory: history });
+        }
+      } catch (error) {
+        console.error("Error saving watch history:", error);
+      }
+    };
+
+    updateWatchHistory();
+  }, [episodeData, selectedEpisode, auth]);
+  
+  
+  if (isLoading || !episodeData) {
     return (
       <div className="h-auto aspect-video lg:max-h-[calc(100vh-150px)] min-h-[20vh] sm:min-h-[30vh] md:min-h-[40vh] lg:min-h-[60vh] w-full animate-pulse bg-slate-700 rounded-md"></div>
     );
-
+  }
   return !episodeData?.sources || episodeData.sources.length === 0 ? (
     <div className="min-h-[40vh] flex flex-col items-center justify-center">
       <div className="w-full max-w-[728px] mx-auto">
@@ -137,13 +131,17 @@ const VideoPlayerSection = () => {
   ) : (
     <div className="space-y-4">
       <ArbPlayer
-        key={episodeData?.sources?.[0].url}
-        episodeInfo={episodeData}
+          src={episodeData.sources[0].url}
+          referer={episodeData.headers.Referer}
+        posterUrl={anime?.anime?.info?.poster || ""}
+        episodeInfo={{
+          sub:1,dub:1
+}}
         serversData={serversData!}
         animeInfo={{
           id: anime.anime.info.id,
           title: anime.anime.info.name,
-          image: anime.anime.info.poster,
+          image: anime?.anime?.info?.poster||"",
         }}
         onServerChange={changeServer}
         onAutoSkipChange={onHandleAutoSkipChange}

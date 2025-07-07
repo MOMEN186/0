@@ -5,7 +5,7 @@ import Image from "next/image";
 import { cn, formatSecondsToMMSS } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Captions, Mic } from "lucide-react";
-import { WatchHistory } from "@/hooks/use-get-bookmark";
+import { WatchHistoryEntry } from "@/hooks/use-get-watch-history";
 import { Progress } from "./ui/progress";
 
 type Props = {
@@ -20,7 +20,7 @@ type Props = {
   variant?: "sm" | "lg";
   href?: string;
   showGenre?: boolean;
-  watchDetail?: WatchHistory | null;
+  watchDetail?: WatchHistoryEntry | null;
 };
 
 const AnimeCard = ({

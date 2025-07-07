@@ -9,7 +9,7 @@ import { useAnimeStore } from "@/store/anime-store";
 import { Episode, IEpisodes } from "@/types/episodes";
 import Select, { ISelectOptions } from "./common/select";
 import { Input } from "./ui/input";
-import { Bookmark } from "@/hooks/use-get-bookmark";
+import { BookmarkData } from "@/hooks/use-get-bookmark";
 
 type Props = {
   animeId: string;
@@ -17,7 +17,7 @@ type Props = {
   subOrDub?: { sub: number; dub: number };
   episodes: IEpisodes;
   isLoading: boolean;
-  bookmarks?: Bookmark[] | null;
+  bookmarks?: BookmarkData[] | null;
 };
 
 const EpisodePlaylist = ({
@@ -30,9 +30,8 @@ const EpisodePlaylist = ({
 }: Props) => {
   const searchParams = useSearchParams();
 
-  const episodeId = searchParams.get("episode");
-
-  const isLatestEpisode = searchParams.get("type");
+  const episodeId = searchParams?.get("episode") ?? null;
+  const isLatestEpisode = searchParams?.get("type") ?? null;
 
   const { setSelectedEpisode } = useAnimeStore();
 
@@ -40,7 +39,7 @@ const EpisodePlaylist = ({
   const episodeRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const [currentGroup, setCurrentGroup] = useState(
-    `1 - ${Math.min(50, episodes?.totalEpisodes!)}`,
+    `1 - ${Math.min(50, episodes?.totalEpisodes!)}`
   );
   const [search, setSearch] = useState("");
 
@@ -60,7 +59,7 @@ const EpisodePlaylist = ({
     ) {
       if (!!isLatestEpisode) {
         setSelectedEpisode(
-          episodes.episodes[episodes.episodes.length - 1].episodeId as string,
+          episodes.episodes[episodes.episodes.length - 1].episodeId as string
         );
       } else {
         setSelectedEpisode(episodes.episodes[0].episodeId as string);
@@ -81,7 +80,7 @@ const EpisodePlaylist = ({
 
   useEffect(() => {
     const episodeIndex = episodes?.episodes.findIndex(
-      (episode) => episode.episodeId === episodeId,
+      (episode) => episode.episodeId === episodeId
     );
 
     if (
@@ -93,15 +92,12 @@ const EpisodePlaylist = ({
       const scrollContainer = scrollContainerRef.current;
 
       if (episodeElement && scrollContainer) {
-        // Get the top offset of the episode relative to the scroll container
         const episodeOffsetTop = episodeElement.offsetTop;
-
-        // Scroll the container directly to the episode's top position
         scrollContainer.scrollTop =
           episodeOffsetTop -
           scrollContainer.offsetHeight / 2 +
           episodeElement.offsetHeight / 2 +
-          80; //Adding some extra px to achieve better positioning
+          80;
       }
     }
     //eslint-disable-next-line
@@ -113,7 +109,6 @@ const EpisodePlaylist = ({
     setSearch(value);
 
     if (!value) {
-      // check if group is selected and filter based on that
       const [start, end] = currentGroup.split(" - ").map(Number);
       const filtered = episodes.episodes.filter((_, index) => {
         return index >= start - 1 && index <= end - 1;
@@ -123,7 +118,7 @@ const EpisodePlaylist = ({
     }
 
     const filtered = episodes?.episodes.filter((episode) =>
-      episode.number.toString().toLowerCase().includes(value.toLowerCase()),
+      episode.number.toString().toLowerCase().includes(value.toLowerCase())
     );
 
     setFilteredEpisodes(filtered);
@@ -140,7 +135,6 @@ const EpisodePlaylist = ({
     let start = 1;
     const end = episodes?.totalEpisodes;
     const options: ISelectOptions[] = [];
-    // group episodes in range of 50
     while (start <= end!) {
       const range = `${start} - ${Math.min(start + 49, end!)}`;
       options.push({
@@ -187,7 +181,7 @@ const EpisodePlaylist = ({
                   variant={"list"}
                   episode={episode}
                   animeId={animeId}
-                  watchedEpisodes={bookmarks?.[0].expand.watchHistory}
+                  watchedEpisodes={bookmarks?.[0]?.expand?.watchHistory ?? []}
                 />
               </div>
             ))}
@@ -195,7 +189,6 @@ const EpisodePlaylist = ({
           {isLoading && <PlaylistSkeleton />}
         </div>
         <div className="flex flex-col space-y-2">
-          {/* Show ad after every 20 episodes */}
           {filteredEpisodes.map((episode, index) => (
             <React.Fragment key={episode.episodeId}>
               <EpisodeCard
@@ -206,10 +199,7 @@ const EpisodePlaylist = ({
                 variant="list"
               />
               {(index + 1) % 20 === 0 && (
-                <Advertisement
-                  position="middle"
-                  className="my-2"
-                />
+                <Advertisement position="middle" className="my-2" />
               )}
             </React.Fragment>
           ))}

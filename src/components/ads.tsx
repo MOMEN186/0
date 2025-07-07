@@ -1,24 +1,23 @@
 "use client";
 
-const Advertisement = () => {
+import { useEffect } from "react";
+
+const Advertisement = ({ position, className }: { position?: string; className?: string }) => {
+  useEffect(() => {
+    if (document.getElementById("cls-ads")) return;
+
+    const js = document.createElement("script");
+    js.id = "cls-ads";
+    js.src = "https://fpyf8.com/88/tag.min.js";
+    js.setAttribute("data-zone", "152715");
+
+    const fjs = document.getElementsByTagName("script")[0];
+    fjs.parentNode?.insertBefore(js, fjs);
+  }, []);
+
   return (
-    <div className="w-full min-h-[90px] relative overflow-hidden">
+    <div className={`w-full min-h-[90px] relative overflow-hidden ${className || ""}`}>
       <div id="container-152715"></div>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            (function(d, s, id) {
-              var js, fjs = d.getElementsByTagName(s)[0];
-              if (d.getElementById(id)) return;
-              js = d.createElement(s);
-              js.id = id;
-              js.src = "https://fpyf8.com/88/tag.min.js";
-              js.setAttribute("data-zone", "152715");
-              fjs.parentNode.insertBefore(js, fjs);
-            }(document, 'script', 'cls-ads'));
-          `
-        }}
-      />
     </div>
   );
 };

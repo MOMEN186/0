@@ -1,16 +1,17 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-
-import NavBar from "@/components/navbar";
+import NavBar from "@/components/header/navbar";
 import Footer from "@/components/footer";
 import Script from "next/script";
 import QueryProvider from "@/providers/query-provider";
 import { PublicEnvScript } from "next-runtime-env";
-
-import { ThemeProvider } from "@/components/theme-provider";
-
+import ThemeProvider  from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import ClientOnly from "@/components/ClientOnly";
+import FirebaseAuthProvider from "@/providers/fireBaseAuthProvider";
+import 'artplayer';                // brings in default skin via JS
+
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -61,6 +62,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="mobile-web-app-capable" content="yes"></meta>
         <meta name="monetag" content="131167917e3df270be7693e6a5f78edc" />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-X9RZ58XPH1"
@@ -93,6 +95,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.className} antialiased max-w-[100vw] overflow-x-hidden`}
       >
+        <ClientOnly>
+          <FirebaseAuthProvider>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -105,7 +109,9 @@ export default function RootLayout({
             <Footer />
             <Toaster />
           </QueryProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </FirebaseAuthProvider>
+          </ClientOnly>
       </body>
     </html>
   );

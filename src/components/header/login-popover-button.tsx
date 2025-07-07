@@ -1,13 +1,10 @@
 import React, { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import Button from "./common/custom-button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { Input } from "./ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import Button from "../common/custom-button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Input } from "../ui/input";
 import DiscordIcon from "@/icons/discord";
-import { pb } from "@/lib/pocketbase";
-import { toast } from "sonner";
-import { useAuthStore } from "@/store/auth-store";
-
+import { signInWithGoogle, signInWithEmail, signInWithDiscord } from "@/lib/firebase/auth";
 type FormData = {
   username: string;
   email: string;
@@ -16,80 +13,14 @@ type FormData = {
 };
 
 function LoginPopoverButton() {
-  const auth = useAuthStore();
+ 
+
   const [formData, setFormData] = useState<FormData>({
     username: "",
     email: "",
     password: "",
     confirm_password: "",
   });
-
-  const loginWithEmail = async () => {
-    try {
-      if (formData.username === "" || formData.password === "") {
-        toast.error("Please fill in all fields", {
-          style: { background: "red" },
-        });
-        return;
-      }
-
-      await pb
-        .collection("users")
-        .authWithPassword(formData.username, formData.password);
-
-      if (pb.authStore.isValid && pb.authStore.record) {
-        toast.success("Login successful", { style: { background: "green" } });
-        clearForm();
-        auth.setAuth({
-          id: pb.authStore.record.id,
-          email: pb.authStore.record.email,
-          username: pb.authStore.record.username,
-          avatar: pb.authStore.record.avatar,
-          collectionId: pb.authStore.record.collectionId,
-          collectionName: pb.authStore.record.collectionName,
-          autoSkip: pb.authStore.record.autoSkip,
-        });
-      }
-    } catch (e) {
-      console.error("Login error:", e);
-      toast.error("Invalid username or password", {
-        style: { background: "red" },
-      });
-    }
-  };
-
-  const signupWithEmail = async () => {
-    if (
-      formData.username === "" ||
-      formData.password === "" ||
-      formData.email === "" ||
-      formData.confirm_password === ""
-    ) {
-      toast.error("Please fill in all fields", {
-        style: { background: "red" },
-      });
-      return;
-    }
-
-    try {
-      await pb.collection("users").create({
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        passwordConfirm: formData.confirm_password,
-      });
-      toast.success("Account created successfully!", { style: { background: "green" } });
-      clearForm();
-    } catch (error: any) {
-      let message = "Error creating account";
-      if (error?.data && typeof error.data === "object") {
-        message = Object.values(error.data).flat().join(" | ");
-      } else if (error?.message) {
-        message = error.message;
-      }
-      toast.error(message, { style: { background: "red" } });
-    }
-  };
 
   const clearForm = () => {
     setFormData({
@@ -100,38 +31,16 @@ function LoginPopoverButton() {
     });
   };
 
-  const loginWithDiscord = async () => {
-    const res = await pb.collection("users").authWithOAuth2({
-      provider: "discord",
-    });
-
-    if (pb.authStore.isValid && pb.authStore.record) {
-      await pb.collection("users").update(pb.authStore.record?.id!, {
-        username: res.meta?.username,
-      });
-
-      toast.success("Login successful", { style: { background: "green" } });
-      auth.setAuth({
-        id: pb.authStore.record.id,
-        email: pb.authStore.record.email,
-        username: pb.authStore.record.username,
-        avatar: pb.authStore.record.avatar,
-        collectionId: pb.authStore.record.collectionId,
-        collectionName: pb.authStore.record.collectionName,
-        autoSkip: pb.authStore.record.autoSkip,
-      });
-    }
-  };
-
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className="bg-white text-md text-black hover:bg-gray-200 hover:text-black transition-all duration-300"
-        >
-          Login
-        </Button>
+          <Button
+            variant="outline"
+            className="bg-white text-md text-black hover:bg-gray-200 hover:text-black transition-all duration-300"
+          >
+            Login
+          </Button>
+        
       </PopoverTrigger>
       <PopoverContent
         side="bottom"
@@ -176,7 +85,7 @@ function LoginPopoverButton() {
               className="w-full text-xs"
               size="sm"
               type="submit"
-              onClick={loginWithEmail}
+               onClick={()=>signInWithEmail(formData.email, formData.password)}
             >
               Login
             </Button>
@@ -185,23 +94,20 @@ function LoginPopoverButton() {
               variant="default"
               className="bg-blue-600 hover:bg-blue-800 text-white w-full text-xs"
               size="sm"
-              onClick={loginWithDiscord}
+              onClick={() => signInWithDiscord()}
             >
               <DiscordIcon className="mr-2" />
               Login with Discord
             </Button>
-<<<<<<< HEAD
-=======
             <Button
               variant="default"
               className="bg-white hover:bg-gray-100 text-black w-full text-xs mt-2 border border-gray-300 flex items-center justify-center"
               size="sm"
-              onClick={() => window.location.href = '/api/auth/signin/google'}
+              onClick={signInWithGoogle}
             >
               <svg className="mr-2" width="18" height="18" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.19 3.23l6.85-6.85C35.64 2.36 30.13 0 24 0 14.82 0 6.73 5.8 2.69 14.09l7.99 6.2C12.36 13.98 17.74 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.21-.42-4.73H24v9.18h12.42c-.54 2.9-2.18 5.36-4.65 7.02l7.19 5.59C43.99 37.13 46.1 31.36 46.1 24.55z"/><path fill="#FBBC05" d="M10.68 28.29c-1.13-3.36-1.13-6.97 0-10.33l-7.99-6.2C.64 15.1 0 19.44 0 24c0 4.56.64 8.9 2.69 12.24l7.99-6.2z"/><path fill="#EA4335" d="M24 48c6.13 0 11.64-2.03 15.84-5.53l-7.19-5.59c-2.01 1.35-4.58 2.14-8.65 2.14-6.26 0-11.64-4.48-13.32-10.59l-7.99 6.2C6.73 42.2 14.82 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></g></svg>
               Login with Google
             </Button>
->>>>>>> 48f40eba9b3264cb924f119e5474409f15fce11d
           </TabsContent>
           <TabsContent value="signup" className="flex flex-col gap-2">
             <div>
@@ -253,7 +159,7 @@ function LoginPopoverButton() {
               className="w-full text-xs"
               size="sm"
               type="submit"
-              onClick={signupWithEmail}
+              onClick={()=>signInWithEmail(formData.email, formData.password)}
             >
               Signup
             </Button>
@@ -262,7 +168,7 @@ function LoginPopoverButton() {
               variant="default"
               className="bg-blue-600 hover:bg-blue-800 text-white w-full text-xs"
               size="sm"
-              onClick={loginWithDiscord}
+              onClick={()=> signInWithDiscord()}
             >
               <DiscordIcon className="mr-2" />
               Signup with Discord

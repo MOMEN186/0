@@ -1,13 +1,10 @@
 "use client";
-
 import Loading from "@/app/loading";
 import parse from "html-react-parser";
 import { ROUTES } from "@/constants/routes";
-
 import Container from "@/components/container";
 import AnimeCard from "@/components/anime-card";
 import { useAnimeStore } from "@/store/anime-store";
-
 import EpisodePlaylist from "@/components/episode-playlist";
 import Select, { ISelectOptions } from "@/components/common/select";
 import {
@@ -19,10 +16,10 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGetAnimeDetails } from "@/query/get-anime-details";
-import React, { ReactNode, useEffect, useMemo, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import AnimeCarousel from "@/components/anime-carousel";
 import { IAnime } from "@/types/anime";
-import useBookMarks from "@/hooks/use-get-bookmark";
+import useFirebaseBookmarks from "@/hooks/use-get-bookmark";
 import { toast } from "sonner";
 import { useGetAllEpisodes } from "@/query/get-all-episodes";
 import Advertisement from "@/components/ads";
@@ -64,12 +61,8 @@ const Layout = (props: Props) => {
   const { setAnime, setSelectedEpisode } = useAnimeStore();
   const router = useRouter();
 
-  const currentAnimeId = useMemo(
-    () => searchParams.get("anime"),
-    [searchParams],
-  );
-  const episodeId = searchParams.get("episode");
-
+  const currentAnimeId = searchParams ? searchParams.get("anime") : null;
+const episodeId = searchParams ? searchParams.get("episode") : null;
   const [animeId, setAnimeId] = useState<string | null>(currentAnimeId);
 
   useEffect(() => {
@@ -97,8 +90,8 @@ const Layout = (props: Props) => {
     //eslint-disable-next-line
   }, [animeId]);
 
-  const { bookmarks, createOrUpdateBookMark } = useBookMarks({
-    animeID: currentAnimeId as string,
+  const { bookmarks, createOrUpdateBookmark } = useFirebaseBookmarks({
+    animeId: currentAnimeId as string,
     page: 1,
     per_page: 1,
   });
@@ -109,7 +102,7 @@ const Layout = (props: Props) => {
     setSelected(value);
 
     try {
-      await createOrUpdateBookMark(
+      await createOrUpdateBookmark(
         currentAnimeId as string,
         anime?.anime.info.name!,
         anime?.anime.info.poster!,
@@ -145,9 +138,6 @@ const Layout = (props: Props) => {
         </div>
 
         <div className="flex flex-col-reverse md:flex-row gap-4 mt-4">
-          <div className="lg:col-span-3 col-span-1 lg:mb-0">
-            {props.children}
-          </div>
           {episodes && (
             <EpisodePlaylist
               animeId={animeId as string}

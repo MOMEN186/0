@@ -1,0 +1,64 @@
+services:
+  4rb-anime:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: 4rb-anime-dev
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      # Firebase configuration (set your .env or CI secrets accordingly)
+      FIREBASE_API_KEY: ${FIREBASE_API_KEY}
+      FIREBASE_AUTH_DOMAIN: ${FIREBASE_AUTH_DOMAIN}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      FIREBASE_STORAGE_BUCKET: ${FIREBASE_STORAGE_BUCKET}
+      FIREBASE_MESSAGING_SENDER_ID: ${FIREBASE_MESSAGING_SENDER_ID}
+      FIREBASE_APP_ID: ${FIREBASE_APP_ID}
+      # Proxy & Redis
+      NEXT_PUBLIC_PROXY_URL: http://host.docker.internal:4040
+      REDIS_URL: redis://redis:6379
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Linux support
+    depends_on:
+      redis:
+        condition: service_healthy
+      proxy:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  proxy:
+    image: dovakiin0/proxy-m3u8:latest
+    ports:
+      - "4040:4040"
+    environment:
+      PORT: 4040
+      CORS_DOMAIN: "localhost:3000,4rb-anime"
+      REDIS_URL: redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - ./proxy-entrypoint.sh:/app/entrypoint.sh
+    entrypoint: ["/bin/sh", "/app/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "4040"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis_data:

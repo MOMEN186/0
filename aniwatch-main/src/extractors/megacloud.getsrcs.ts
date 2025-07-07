@@ -14,11 +14,14 @@ const user_agent = USER_AGENT_HEADER;
 
 const crypto = webcrypto as unknown as Crypto;
 let wasm: any;
-let arr = new Array(128).fill(void 0);
-let dateNow = Date.now();
-let content: string = "";
+const arr = new Array(128).fill(void 0);
+const dateNow = Date.now();
+const content: string = "";
 
-function isDetached(buffer: ArrayBuffer): boolean {
+function isDetached(buffer: ArrayBufferLike): boolean {
+    
+    if (!(buffer instanceof ArrayBuffer)) return false;
+
     if (buffer.byteLength === 0) {
         const formatted = util.format(buffer);
         return formatted.includes("detached");
@@ -135,40 +138,41 @@ const encode = function (text: string, array: Uint8Array) {
 };
 
 function parse(text: string, func: Function, func2: Function) {
-    if (void 0 === func2) {
-        var encoded = encoder.encode(text);
-        const parsedIndex = func(encoded.length, 1) >>> 0;
-        return (
-            getMemBuff()
-                .subarray(parsedIndex, parsedIndex + encoded.length)
-                .set(encoded),
-            (size = encoded.length),
-            parsedIndex
-        );
-    }
-    let len = text.length;
-    let parsedLen = func(len, 1) >>> 0;
-    var new_arr = getMemBuff();
-    let i = 0;
-    for (; i < len; i++) {
-        var char = text.charCodeAt(i);
-        if (127 < char) {
-            break;
-        }
-        new_arr[parsedLen + i] = char;
-    }
+  if (void 0 === func2) {
+    const encoded = encoder.encode(text);
+    const parsedIndex = func(encoded.length, 1) >>> 0;
     return (
-        i !== len &&
-            (0 !== i && (text = text.slice(i)),
-            (parsedLen =
-                func2(parsedLen, len, (len = i + 3 * text.length), 1) >>> 0),
-            (encoded = getMemBuff().subarray(parsedLen + i, parsedLen + len)),
-            (i += encode(text, encoded).written),
-            (parsedLen = func2(parsedLen, len, i, 1) >>> 0)),
-        (size = i),
-        parsedLen
+      getMemBuff()
+        .subarray(parsedIndex, parsedIndex + encoded.length)
+        .set(encoded),
+      (size = encoded.length),
+      parsedIndex
     );
+  }
+  let len = text.length;
+  let parsedLen = func(len, 1) >>> 0;
+  const new_arr = getMemBuff();
+  let i = 0;
+  for (; i < len; i++) {
+    const char = text.charCodeAt(i);
+    if (127 < char) {
+      break;
+    }
+    new_arr[parsedLen + i] = char;
+  }
+  let encoded: Uint8Array;  // <-- Declare encoded here
+  return (
+    i !== len &&
+      (0 !== i && (text = text.slice(i)),
+      (parsedLen = func2(parsedLen, len, (len = i + 3 * text.length), 1) >>> 0),
+      (encoded = getMemBuff().subarray(parsedLen + i, parsedLen + len)),
+      (i += encode(text, encoded).written),
+      (parsedLen = func2(parsedLen, len, i, 1) >>> 0)),
+    (size = i),
+    parsedLen
+  );
 }
+
 
 let dataView: DataView | null;
 
@@ -192,7 +196,7 @@ function shift(QP: number) {
 }
 
 function shiftGet(QP: number) {
-    var Qn = get(QP);
+    const  Qn = get(QP);
     return shift(QP), Qn;
 }
 
@@ -210,7 +214,7 @@ function decodeSub(index: number, offset: number) {
 
 function addToStack(item: any) {
     pointer === arr.length && arr.push(arr.length + 1);
-    var Qn = pointer;
+    const  Qn = pointer;
     return (pointer = arr[Qn]), (arr[Qn] = item), Qn;
 }
 
@@ -293,11 +297,11 @@ function initWasm() {
                 return typeof get(index) == "string";
             },
             __wbindgen_is_object: function (index: number) {
-                let object = get(index);
+                const  object = get(index);
                 return typeof object == "object" && object !== null;
             },
             __wbindgen_number_get: function (offset: number, index: number) {
-                let number = get(index);
+                const  number = get(index);
                 getDataView().setFloat64(
                     offset + 8,
                     isNull(number) ? 0 : number,
@@ -306,8 +310,8 @@ function initWasm() {
                 getDataView().setInt32(offset, isNull(number) ? 0 : 1, true);
             },
             __wbindgen_string_get: function (offset: number, index: number) {
-                let str = get(index);
-                let val = parse(
+                const  str = get(index);
+                const  val = parse(
                     str,
                     wasm.__wbindgen_export_0,
                     wasm.__wbindgen_export_1
@@ -319,7 +323,7 @@ function initWasm() {
                 shiftGet(index);
             },
             __wbindgen_cb_drop: function (index: number) {
-                let org = shiftGet(index).original;
+            const  org = shiftGet(index).original;
                 return 1 == org.cnt-- && !(org.a = 0);
             },
             __wbindgen_string_new: function (index: number, offset: number) {
@@ -332,7 +336,7 @@ function initWasm() {
                 return void 0 === get(index);
             },
             __wbindgen_boolean_get: function (index: number) {
-                let bool = get(index);
+                const  bool = get(index);
                 return "boolean" == typeof bool ? (bool ? 1 : 0) : 2;
             },
             __wbg_instanceof_CanvasRenderingContext2d_4ec30ddd3f29f8f9:
@@ -355,9 +359,9 @@ function initWasm() {
             __wbg_msCrypto_eb05e62b530a1508: function (index: number) {
                 return addToStack(get(index).msCrypto);
             },
-            // @ts-ignore
-            __wbg_toString_6eb7c1f755c00453: function (index: number) {
-                let fakestr = "[object Storage]";
+           
+            __wbg_toString_6eb7c1f755c00453: function () {
+                const  fakestr = "[object Storage]";
                 return addToStack(fakestr);
             },
             __wbg_toString_139023ab33acec36: function (index: number) {
@@ -381,9 +385,9 @@ function initWasm() {
                 return addToStack(get(index).node);
             },
             __wbg_localStorage_3d538af21ea07fcc: function () {
-                // @ts-ignore
-                return applyToWindow(function (index: number) {
-                    let data = fake_window.localStorage;
+            
+                return applyToWindow(function () {
+                    const  data = fake_window.localStorage;
                     if (isNull(data)) {
                         return 0;
                     } else {
@@ -407,28 +411,12 @@ function initWasm() {
             __wbg_fillText_07e5da9e41652f20: function () {},
             __wbg_setProperty_5144ddce66bbde41: function () {},
             __wbg_createElement_03cf347ddad1c8c0: function () {
-                return applyToWindow(function (
-                    // @ts-ignore
-                    index,
-                    // @ts-ignore
-                    decodeIndex: number,
-                    // @ts-ignore
-                    decodeIndexOffset: number
-                ) {
+                return applyToWindow(function () {
                     return addToStack(canvas);
                 }, arguments);
             },
             __wbg_querySelector_118a0639aa1f51cd: function () {
-                return applyToWindow(function (
-                    // @ts-ignore
-                    index: number,
-                    // @ts-ignore
-                    decodeIndex: number,
-                    // @ts-ignore
-                    decodeOffset: number
-                ) {
-                    //let item = get(index).querySelector(decodeSub(decodeIndex, decodeOffset));
-                    //return isNull(item) ? 0 : addToStack(item);
+                return applyToWindow(function () {
                     return addToStack(meta);
                 }, arguments);
             },
@@ -437,19 +425,10 @@ function initWasm() {
                     return addToStack(nodeList);
                 }, arguments);
             },
-            __wbg_getAttribute_706ae88bd37410fa: function (
-                offset: number,
-                // @ts-ignore
-                index: number,
-                // @ts-ignore
-                decodeIndex: number,
-                // @ts-ignore
-                decodeOffset: number
-            ) {
-                //let attr = get(index).getAttribute(decodeSub(decodeIndex, decodeOffset));
-                let attr = meta.content;
-                //todo!
-                let todo = isNull(attr)
+            __wbg_getAttribute_706ae88bd37410fa: function (  offset: number, ) {
+                const  attr = meta.content;
+               
+                const  todo = isNull(attr)
                     ? 0
                     : parse(
                           attr,
@@ -460,7 +439,7 @@ function initWasm() {
                 getDataView().setInt32(offset, todo, true);
             },
             __wbg_target_6795373f170fd786: function (index: number) {
-                let target = get(index).target;
+                const target = get(index).target;
                 return isNull(target) ? 0 : addToStack(target);
             },
             __wbg_addEventListener_f984e99465a6a7f4: function () {},
@@ -485,9 +464,8 @@ function initWasm() {
                 }, arguments);
             },
             __wbg_toDataURL_97b108dd1a4b7454: function () {
-                // @ts-ignore
-                return applyToWindow(function (offset: number, index: number) {
-                    let _dataUrl = parse(
+                return applyToWindow(function (offset: number) {
+                    const _dataUrl = parse(
                         dataURL,
                         wasm.__wbindgen_export_0,
                         wasm.__wbindgen_export_1
@@ -509,7 +487,7 @@ function initWasm() {
                 offset: number,
                 index: number
             ) {
-                let _src = parse(
+                const _src = parse(
                     get(index).src,
                     wasm.__wbindgen_export_0,
                     wasm.__wbindgen_export_1
@@ -530,13 +508,13 @@ function initWasm() {
                 offset: number,
                 index: number
             ) {
-                var _data = Qj(get(index).data, wasm.__wbindgen_export_0);
+                const _data = Qj(get(index).data, wasm.__wbindgen_export_0);
                 getDataView().setInt32(offset + 4, size, true);
                 getDataView().setInt32(offset, _data, true);
             },
             __wbg_origin_305402044aa148ce: function () {
                 return applyToWindow(function (offset: number, index: number) {
-                    let _origin = parse(
+                    const _origin = parse(
                         get(index).origin,
                         wasm.__wbindgen_export_0,
                         wasm.__wbindgen_export_1
@@ -549,7 +527,7 @@ function initWasm() {
                 return get(index).length;
             },
             __wbg_get_c30ae0782d86747f: function (index: number) {
-                let _image = get(index).image;
+                const _image = get(index).image;
                 return isNull(_image) ? 0 : addToStack(_image);
             },
             __wbg_timeOrigin_f462952854d802ec: function (index: number) {
@@ -559,21 +537,21 @@ function initWasm() {
                 return true;
             },
             __wbg_document_eb7fd66bde3ee213: function (index: number) {
-                let _document = get(index).document;
+                const _document = get(index).document;
                 return isNull(_document) ? 0 : addToStack(_document);
             },
             __wbg_location_b17760ac7977a47a: function (index: number) {
                 return addToStack(get(index).location);
             },
             __wbg_performance_4ca1873776fdb3d2: function (index: number) {
-                let _performance = get(index).performance;
+                const _performance = get(index).performance;
                 return isNull(_performance) ? 0 : addToStack(_performance);
             },
             __wbg_origin_e1f8acdeb3a39a2b: function (
                 offset: number,
                 index: number
             ) {
-                let _origin = parse(
+                const _origin = parse(
                     get(index).origin,
                     wasm.__wbindgen_export_0,
                     wasm.__wbindgen_export_1
@@ -586,7 +564,7 @@ function initWasm() {
                 decode1: number,
                 decode2: number
             ) {
-                let data = get(index)[decodeSub(decode1, decode2)];
+                const data = get(index)[decodeSub(decode1, decode2)];
                 return isNull(data) ? 0 : addToStack(data);
             },
             __wbg_setTimeout_6ed7182ebad5d297: function () {
@@ -625,8 +603,8 @@ function initWasm() {
             },
             __wbg_eval_c824e170787ad184: function () {
                 return applyToWindow(function (index: number, offset: number) {
-                    let fake_str = "fake_" + decodeSub(index, offset);
-                    let ev = eval(fake_str);
+                    const fake_str = "fake_" + decodeSub(index, offset);
+                    const ev = eval(fake_str);
                     return addToStack(ev);
                 }, arguments);
             },
@@ -703,7 +681,7 @@ function initWasm() {
                 return addToStack(args(Qn, QT, 2, export5));
             },
             __wbindgen_closure_wrapper123: function (Qn: any, QT: any) {
-                let test = addToStack(args(Qn, QT, 9, export4));
+                const test = addToStack(args(Qn, QT, 9, export4));
                 return test;
             },
         },
@@ -725,7 +703,6 @@ function QZ(QP: any) {
           assignWasm(new WebAssembly.Instance(QP, Qn)));
 }
 
-// todo!
 async function loadWasm(url: any) {
     const mod = initWasm();
     const response = fetch(url, {
@@ -747,40 +724,39 @@ const grootLoader = {
     },
 };
 
-let wasmLoader = Object.assign(loadWasm, { initSync: QZ }, grootLoader);
+const wasmLoader = Object.assign(loadWasm, { initSync: QZ }, grootLoader);
+// const Z = (z: string, Q0: string) => {
+//     try {
+//         var Q1 = CryptoJS.AES.decrypt(z, Q0);
+//         return JSON.parse(Q1.toString(CryptoJS.enc.Utf8));
+//     } catch (Q2: any) {}
+//     return [];
+// };
 
-// @ts-ignore
-const Z = (z: string, Q0: string) => {
-    try {
-        var Q1 = CryptoJS.AES.decrypt(z, Q0);
-        return JSON.parse(Q1.toString(CryptoJS.enc.Utf8));
-    } catch (Q2: any) {}
-    return [];
-};
-// @ts-ignore
-const R = (z: Uint8Array, Q0: Array<number>) => {
-    try {
-        for (let Q1 = 0; Q1 < z.length; Q1++) {
-            z[Q1] = z[Q1] ^ Q0[Q1 % Q0.length];
-        }
-    } catch (Q2) {
-        return null;
-    }
-};
 
-// @ts-ignore
-function r(z: number) {
-    return [
-        (4278190080 & z) >> 24,
-        (16711680 & z) >> 16,
-        (65280 & z) >> 8,
-        255 & z,
-    ];
-}
+// const R = (z: Uint8Array, Q0: Array<number>) => {
+//     try {
+//         for (let Q1 = 0; Q1 < z.length; Q1++) {
+//             z[Q1] = z[Q1] ^ Q0[Q1 % Q0.length];
+//         }
+//     } catch (Q2) {
+//         return null;
+//     }
+// };
+
+
+// function r(z: number) {
+//     return [
+//         (4278190080 & z) >> 24,
+//         (16711680 & z) >> 16,
+//         (65280 & z) >> 8,
+//         255 & z,
+//     ];
+// }
 
 const V = async () => {
     try {
-        let Q0 = await wasmLoader(
+        const  Q0 = await wasmLoader(
             "https://megacloud.tv/images/loading.png?v=0.0.9"
         );
 
@@ -794,16 +770,16 @@ const V = async () => {
 };
 
 const getMeta = async (url: string) => {
-    let resp = await fetch(url, {
+    const  resp = await fetch(url, {
         headers: {
             UserAgent: user_agent,
             Referrer: referrer,
         },
     });
-    let txt = await resp.text();
-    let regx = /name="j_crt" content="[A-Za-z0-9]*/g;
-    let match = txt.match(regx)?.[0];
-    let content = match?.slice(match.lastIndexOf('"') + 1);
+    const txt = await resp.text();
+    const regx = /name="j_crt" content="[A-Za-z0-9]*/g;
+    const match = txt.match(regx)?.[0];
+    const content = match?.slice(match.lastIndexOf('"') + 1);
     meta.content = content + "==";
 };
 
@@ -818,15 +794,19 @@ const i = (a: Uint8Array, P: Array<number>) => {
 };
 
 const M = (a: any, P: any) => {
-    try {
-        var Q0 = CryptoJS.AES.decrypt(a, P);
-        return JSON.parse(Q0.toString(CryptoJS.enc.Utf8));
-    } catch (Q1) {
-        // @ts-ignore
-        log.info(Q1.message);
+  try {
+    const Q0 = CryptoJS.AES.decrypt(a, P);
+    return JSON.parse(Q0.toString(CryptoJS.enc.Utf8));
+  } catch (Q1: unknown) {
+    if (Q1 instanceof Error) {
+      log.info(Q1.message);
+    } else {
+      log.info(String(Q1));
     }
-    return [];
+  }
+  return [];
 };
+
 
 function z(a: any) {
     return [
@@ -844,13 +824,13 @@ export async function getSources(xrax: string) {
     canvas.baseUrl = embed_url + xrax + "?k=1";
     fake_window.location.href = embed_url + xrax + "?k=1";
 
-    let browser_version = 1878522368;
+    const browser_version = 1878522368;
     let res = {} as extractedSrc;
 
     try {
         await V();
 
-        let getSourcesUrl =
+        const  getSourcesUrl =
             "https://megacloud.tv/embed-2/ajax/e-1/getSources?id=" +
             fake_window.pid +
             "&v=" +
@@ -860,7 +840,7 @@ export async function getSources(xrax: string) {
             "&b=" +
             browser_version;
 
-        let resp_json = await (
+        const resp_json = await (
             await fetch(getSourcesUrl, {
                 headers: {
                     "User-Agent": user_agent,
@@ -874,8 +854,8 @@ export async function getSources(xrax: string) {
         ).json();
 
         //let encrypted = resp_json.sources;
-        let Q3 = fake_window.localStorage.kversion;
-        let Q1 = z(Q3);
+        const Q3 = fake_window.localStorage.kversion;
+        const Q1 = z(Q3);
         let Q5 = fake_window.navigate();
         Q5 = new Uint8Array(Q5);
         let Q8: any;
@@ -885,9 +865,10 @@ export async function getSources(xrax: string) {
                 : ((Q8 = resp_json.k), i(Q8, Q1), Q8);
 
         res = resp_json as extractedSrc;
-        // @ts-ignore
-        const str = btoa(String.fromCharCode.apply(null, new Uint8Array(Q8)));
-
+     
+        const str = btoa(
+  String.fromCharCode.apply(null, [...new Uint8Array(Q8)])
+);
         // decoding encrypted .m3u8 file url
         res.sources = M(res.sources, str) as unencryptedSrc[];
 

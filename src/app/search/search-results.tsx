@@ -28,21 +28,40 @@ const SearchResults = () => {
   const params = useAnimeSearchParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Clean display phrase (remove quotes and trim)
   const displayPhrase = params.q.replace(/^"+|"+$/g, "").trim();
 
+  // Fetch search results using params
   const { data: searchResults, isLoading } = useGetSearchAnimeResults(params);
 
+  // Local state to hold filters
   const [filters, setFilters] = React.useState<SearchAnimeParams>({
-    q: params.q,
-    page: params.page,
-    type: params.type,
-    status: params.status,
-    rated: params.rated,
-    season: params.season,
-    language: params.language,
-    sort: params.sort,
-    genres: params.genres,
+    q: params.q || "",
+    page: params.page || 1,
+    type: params.type || "",
+    status: params.status || "",
+    rated: params.rated || "",
+    season: params.season || "",
+    language: params.language || "",
+    sort: params.sort || "",
+    genres: params.genres || "",
   });
+
+  // Function to update filters state
+  const onChange = (key: keyof SearchAnimeParams, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Pagination handlers
+  const handlePageChange = (pageNumber: number) => {
+    if (pageNumber < 1) return;
+
+    // Clone current URLSearchParams or empty if null
+    const _params = new URLSearchParams(searchParams?.toString() ?? "");
+    _params.set("page", pageNumber.toString());
+    router.push(`/search?${_params.toString()}`);
+  };
 
   const handleNextPage = () => {
     if (searchResults?.hasNextPage) {
@@ -56,35 +75,25 @@ const SearchResults = () => {
     }
   };
 
-  const handlePageChange = (pageNumber: number) => {
-    if (pageNumber < 1) return;
-    const _params = new URLSearchParams(searchParams.toString());
-    _params.set("page", pageNumber.toString());
-    router.push(`/search?${_params.toString()}`);
-  };
-
-  const onChange = (key: keyof typeof filters, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
-
+  // Apply filters by pushing new search params to URL
   const applyFilters = () => {
-    const searchParams = new URLSearchParams();
-
-    onChange("q", params.q);
+    const newSearchParams = new URLSearchParams();
 
     Object.entries(filters).forEach(([key, value]) => {
       if (typeof value === "string" && value.trim() !== "") {
-        searchParams.set(key, value);
+        newSearchParams.set(key, value);
       } else if (typeof value === "number" && !isNaN(value)) {
-        searchParams.set(key, value.toString());
+        newSearchParams.set(key, value.toString());
       }
     });
 
-    searchParams.delete("page");
+    // Reset to first page on filter change
+    newSearchParams.delete("page");
 
-    router.push(`/search?${searchParams.toString()}`);
+    router.push(`/search?${newSearchParams.toString()}`);
   };
 
+  // Reset filters to default empty values and reset query param
   const resetFilters = () => {
     setFilters({
       q: "",
@@ -97,11 +106,12 @@ const SearchResults = () => {
       sort: "",
       genres: "",
     });
-    router.push('/search?q=""');
+    router.push(`/search?q=""`);
   };
 
   return (
     <div className="flex flex-col gap-10 mt-28 lg:mt-36 pb-20 min-h-[75vh]">
+      {/* Filters Panel */}
       <div className="bg-slate-800 bg-opacity-50 backdrop-blur-sm rounded-lg p-5 flex flex-col gap-5">
         <p className="text-lg font-semibold">Filters</p>
         <div className="flex flex-wrap gap-3">
@@ -162,7 +172,7 @@ const SearchResults = () => {
                   "data-[state=on]:border-[#e9376b] data-[state=on]:text-white data-[state=on]:bg-[#e9376b]",
                   filters.genres?.split(",").includes(genre.value)
                     ? "bg-[#e9376b] text-white"
-                    : "text-slate-300",
+                    : "text-slate-300"
                 )}
               >
                 {genre.label}
@@ -188,28 +198,31 @@ const SearchResults = () => {
           </Button>
         </div>
       </div>
+
+      {/* Search Phrase Display */}
       <div className="text-2xl font-semibold">
         {displayPhrase === "" ? (
           "Filter Results"
         ) : (
           <>
-            Search Results for{" "}
-            <span className="font-[800]">&quot;{params.q}&quot;</span>
+            Search Results for <span className="font-[800]">&quot;{params.q}&quot;</span>
           </>
         )}
       </div>
+
+      {/* Loading Skeleton */}
       {isLoading && (
         <div className="grid lg:grid-cols-5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-7 w-full gap-5 content-center">
-          {[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1].map((_, idx) => {
-            return (
-              <div
-                key={idx}
-                className="rounded-xl h-[15.625rem] min-w-[10.625rem] max-w-[12.625rem] md:h-[18.75rem] md:max-w-[12.5rem] animate-pulse bg-slate-700"
-              ></div>
-            );
-          })}
+          {Array.from({ length: 14 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="rounded-xl h-[15.625rem] min-w-[10.625rem] max-w-[12.625rem] md:h-[18.75rem] md:max-w-[12.5rem] animate-pulse bg-slate-700"
+            />
+          ))}
         </div>
       )}
+
+      {/* Results Grid */}
       <div className="grid lg:grid-cols-5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-7 w-full gap-5 content-center">
         {searchResults?.animes.map((anime, idx) => (
           <BlurFade key={idx} delay={idx * 0.05} inView>
@@ -227,9 +240,11 @@ const SearchResults = () => {
           </BlurFade>
         ))}
       </div>
+
+      {/* Pagination */}
       {searchResults && searchResults.totalPages && (
         <Pagination
-          totalPages={searchResults?.totalPages}
+          totalPages={searchResults.totalPages}
           currentPage={params.page}
           handleNextPage={handleNextPage}
           handlePageChange={handlePageChange}
