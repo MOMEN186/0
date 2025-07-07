@@ -17,7 +17,7 @@ function AnimeLists(props: Props) {
     per_page: 8,
   });
 
-s
+
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       setPage((prevPage) => prevPage + 1);
