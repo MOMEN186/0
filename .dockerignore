@@ -48,3 +48,9 @@ next-env.d.ts
 docker-compose.yml
 Dockerfile
 README.md
+node_modules
+.git
+.env
+*.log
+**/src/pages/api/collections/bookmarks/records.ts
+**/OneDrive/**
