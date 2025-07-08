@@ -23,7 +23,6 @@
     
     # Copy source and build application
     COPY  . . 
-    COPY .env.production .env
     RUN npm run build
     
     # ---------------------------------------------------
