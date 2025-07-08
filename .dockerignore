@@ -45,8 +45,6 @@ next-env.d.ts
 .vercel
 
 # Project files
-docker-compose.yml
-Dockerfile
 README.md
 node_modules
 .git
