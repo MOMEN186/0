@@ -1,35 +1,53 @@
 // pages/api/bookmarks/index.ts
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import axios from "axios";
+import { db } from "@/lib/firebase/firebase";
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+  where,
+  getDocs,
 
-const POCKETBASE_URL = "http://localhost:8090"; // change if needed
+} from "firebase/firestore";
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    console.log("Incoming Query:", req.query);  // 👈 log query params
+    const { page = 1, perPage = 10, filter = "", sort = "createdAt" } = req.query;
 
-    const { page = 1, perPage = 10, filter = "", expand = "", sort = "-created" } = req.query;
+    const colRef = collection(db, "bookmarks");
 
-    const params = new URLSearchParams({
-      page: String(page),
-      perPage: String(perPage),
-      sort: String(sort),
+    const constraints = [];
+
+    // Optional filter (e.g., by user ID or anime title)
+    if (filter) {
+      constraints.push(where("userID", "==", String(filter))); // customize this field!
+    }
+
+    // Sorting
+    constraints.push(orderBy(String(sort), "desc"));
+
+    // Pagination logic (basic)
+    constraints.push(limit(Number(perPage)));
+
+    const q = query(colRef, ...constraints);
+
+    const snapshot = await getDocs(q);
+
+    const data = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.status(200).json({
+      page: Number(page),
+      perPage: Number(perPage),
+      items: data,
+      totalItems: data.length,
     });
-
-    if (filter) params.append("filter", String(filter));
-    if (expand) params.append("expand", String(expand));
-
-    console.log("Requesting from PocketBase:", params.toString()); // 👈 log built URL
-
-    const pbRes = await axios.get(`${POCKETBASE_URL}/api/collections/bookmarks/records`, {
-      params,
-    });
-
-    res.status(200).json(pbRes.data);
   } catch (err: any) {
-    console.error("API ERROR:", err.response?.data || err.message || err); // 👈 full error
-    res.status(err.response?.status || 500).json({
-      error: err.response?.data || "Something went wrong",
-    });
+    console.error("Firebase API ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch bookmarks from Firestore" });
   }
 }
