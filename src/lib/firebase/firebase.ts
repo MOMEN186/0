@@ -15,6 +15,8 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export { app };
-export const auth = getAuth(app);
+export const auth = typeof window !== "undefined"
+  ? getAuth(app)
+  : null;
 export const db = getFirestore(app); 
 export const analytics = typeof window !== "undefined" ? getAnalytics(app) : null;
