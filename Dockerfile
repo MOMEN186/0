@@ -1,49 +1,51 @@
 # ---------------------------------------------------
-# 1. Base image - security hardened
+# 1. Build stage - install dependencies & build
 # ---------------------------------------------------
-    FROM node:20-alpine AS base
+    
+    
+    FROM node:20-alpine AS builder
     LABEL org.opencontainers.image.title="4RB ANIME"
     LABEL org.opencontainers.image.description="Arabic Anime streaming service UI"
     LABEL org.opencontainers.image.maintainer="admin@4rb-anime.com"
     LABEL org.opencontainers.image.vendor="4rb-anime.com"
     
-    ENV NODE_ENV=production \
-        PORT=3000
+    # Set working directory
+    WORKDIR /app
     
-    # Install build tools
+    # Install build tools and dependencies
     RUN apk add --no-cache --virtual .build-deps \
         git \
         openssh-client
     
-    WORKDIR /app
-    
-    # Copy package manifests
+    # Copy manifests and install all dependencies
     COPY package.json package-lock.json ./
+    RUN npm ci
     
-    # Install dependencies with npm
-    RUN npm ci --only=production
-    
-    # Copy source and build
-    COPY . .
+    # Copy source and build application
+    COPY  . . 
+    COPY .env.production .env
     RUN npm run build
     
     # ---------------------------------------------------
-    # Runner stage
+    # 2. Runner stage - production optimized
     # ---------------------------------------------------
     FROM node:20-alpine AS runner
     WORKDIR /app
     
     # Create non-root user
-    RUN addgroup -g 1001 -S nodejs && \
-        adduser -S nextjs -u 1001
+    RUN addgroup -g 1001 -S nodejs \
+        && adduser -S nextjs -u 1001 -G nodejs
     
-    # Copy built assets
-    COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-    COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-    COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+    # Copy built assets from builder
+    COPY --from=builder /app/public ./public
+    COPY --from=builder /app/.next/standalone .
+    COPY --from=builder /app/.next/static ./.next/static
     
+    # Switch to unprivileged user
+    RUN mkdir -p /app/.next/cache && chown -R nextjs:nodejs /app/.next
     USER nextjs
     
+    # Healthcheck
     HEALTHCHECK --interval=30s --timeout=3s \
       CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
     

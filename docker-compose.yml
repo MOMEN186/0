@@ -23,9 +23,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_POCKETBASE_URL: http://localhost:8090
-      NEXT_PUBLIC_PROXY_URL: http://proxy:4040
+      # Remove or comment out PocketBase URL since you're not using it
+      # NEXT_PUBLIC_POCKETBASE_URL: ""
+      NEXT_PUBLIC_PROXY_URL: http://localhost:4040
       REDIS_URL: redis://redis:6379
+      # Add internal proxy URL for server-side calls if needed
+      PROXY_INTERNAL_URL: http://proxy:4040
     depends_on:
       redis:
         condition: service_healthy

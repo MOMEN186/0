@@ -112,7 +112,6 @@ function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
             }
           })
         );
-        console.log(bookmarksWithHistory);
         setBookmarks(bookmarksWithHistory);
       } catch (error) {
         console.error("Error fetching bookmarks:", error);
