@@ -60,7 +60,7 @@ function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
     const fetchBookmarks = async () => {
       setLoading(true);
       try {
-        const bookmarksRef = collection(db, "bookmark");
+        const bookmarksRef = collection(db, "bookmarks");
 
         let baseQuery = query(bookmarksRef, where("userID", "==", auth.id));
         if (animeID) baseQuery = query(baseQuery, where("animeID", "==", animeID));
@@ -87,7 +87,7 @@ function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
           id: doc.id,
           ...doc.data(),
         } as BookmarkData));
-
+        
         const bookmarksWithHistory = await Promise.all(
           rawBookmarks.map(async (bookmark) => {
             try {
@@ -112,7 +112,7 @@ function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
             }
           })
         );
-
+        console.log(bookmarksWithHistory);
         setBookmarks(bookmarksWithHistory);
       } catch (error) {
         console.error("Error fetching bookmarks:", error);
@@ -137,7 +137,7 @@ function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
       const bookmarksRef = collection(db, "bookmarks");
       const q = query(bookmarksRef, where("userID", "==", auth.id), where("animeID", "==", animeId));
       const snapshot = await getDocs(q);
-
+      
       if (!snapshot.empty) {
         const docRef = snapshot.docs[0].ref;
         const existing = snapshot.docs[0].data();
@@ -147,6 +147,7 @@ function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
             updatedAt: serverTimestamp(),
           });
         }
+        console.log(snapshot.docs[0]);
         return snapshot.docs[0].id;
       } else {
         const docRef = await addDoc(bookmarksRef, {
@@ -160,8 +161,8 @@ function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
         return docRef.id;
       }
     } catch (error) {
-      console.error("Error creating/updating bookmark:", error);
-      toast.error("Failed to update bookmark");
+      console.error("Error creating/updating bookmarks:", error);
+      toast.error("Failed to update bookmarks");
       return null;
     }
   };

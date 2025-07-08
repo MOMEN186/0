@@ -17,7 +17,9 @@ function AnimeLists(props: Props) {
     per_page: 8,
   });
 
-s
+  useEffect(() => { console.log(bookmarks) }, [bookmarks]);
+
+
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       setPage((prevPage) => prevPage + 1);
