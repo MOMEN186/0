@@ -2,7 +2,7 @@ import AnimeCard from "@/components/anime-card";
 import Pagination from "@/components/common/pagination";
 import { ROUTES } from "@/constants/routes";
 import useFirebaseBookmarks from "@/hooks/use-get-bookmark";
-import React, { useEffect } from "react";
+import React  from "react";
 
 type Props = {
   status: string;
@@ -16,8 +16,6 @@ function AnimeLists(props: Props) {
     page: currentPage,
     per_page: 8,
   });
-
-  useEffect(() => { console.log(bookmarks) }, [bookmarks]);
 
 
   const handleNextPage = () => {
