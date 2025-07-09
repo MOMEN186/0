@@ -32,6 +32,10 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.4rb-anime.rule=Host(`4rbanime.com`,`www.4rbanime.com`,`4rbanime.fun`,`www.4rbanime.fun`)"
+      - "traefik.http.services.4rb-anime.loadbalancer.server.port=3000"
 
   proxy:
     image: dovakiin0/proxy-m3u8:latest
