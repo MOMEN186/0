@@ -12,6 +12,7 @@
     # Set working directory
     WORKDIR /app
     
+    RUN apk add --no-cache curl
     # Install build tools and dependencies
     RUN apk add --no-cache --virtual .build-deps \
         git \
