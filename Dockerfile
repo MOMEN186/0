@@ -37,7 +37,7 @@
     
     # Copy built assets from builder
     COPY --from=builder /app/public ./public
-    COPY --from=builder /app/.next/standalone .
+    COPY --from=builder /app/.next/standalone .next/standalone
     COPY --from=builder /app/.next/static ./.next/static
     
     # Switch to unprivileged user
