@@ -36,7 +36,7 @@
     USER nextjs
     
     HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-      CMD curl -f http://localhost:3000/ || exit 1
+    CMD curl -f http://127.0.0.1:3000/ || curl -f http://0.0.0.0:3000/ || exit 1
     
     EXPOSE 3000
     
