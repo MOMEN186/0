@@ -29,8 +29,9 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.4rb-anime.rule=Host(4rbanime.com,www.4rbanime.com,4rbanime.fun,www.4rbanime.fun)"
-      - "traefik.http.routers.4rb-anime.entrypoints=web"
+      - "traefik.http.routers.4rb-anime.rule=Host(4rabanime.com,www.4rabanime.com,4rbanime.fun,www.4rbanime.fun)"
+      - "traefik.http.routers.4rb-anime.entrypoints=websecure"
+      - "traefik.http.routers.4rb-anime.tls.certresolver=myresolver"
       - "traefik.http.services.4rb-anime.loadbalancer.server.port=3000"
     networks:
       - web
@@ -49,11 +50,17 @@ services:
       - --api.dashboard=true
       - --providers.docker=true
       - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.myresolver.acme.tlschallenge=true
+      - --certificatesresolvers.myresolver.acme.email=admin@4rb-anime.com
+      - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
     ports:
       - "80:80"
-      - "8080:8080" # Traefik dashboard
+      - "443:443"
+      - "8080:8080" # Optional Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./letsencrypt:/letsencrypt
     networks:
       - web
 
