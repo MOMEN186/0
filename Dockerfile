@@ -12,7 +12,7 @@
     # Set working directory
     WORKDIR /app
     
-    RUN apk add --no-cache curl
+    
     # Install build tools and dependencies
     RUN apk add --no-cache --virtual .build-deps \
         git \
@@ -31,7 +31,7 @@
     # ---------------------------------------------------
     FROM node:20-alpine AS runner
     WORKDIR /app
-    
+    RUN apk add --no-cache curl
     # Create non-root user
     RUN addgroup -g 1001 -S nodejs \
         && adduser -S nextjs -u 1001 -G nodejs
