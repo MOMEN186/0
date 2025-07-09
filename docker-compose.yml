@@ -3,8 +3,6 @@ version: "3.8"
 services:
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -12,6 +10,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - web
 
   4rb-anime:
     build:
@@ -20,8 +20,6 @@ services:
       args:
         NODE_ENV: production
     image: 4rb-anime/4rb-anime:latest
-    ports:
-      - "3001:3000"
     environment:
       NEXT_PUBLIC_PROXY_URL: http://localhost:4040
       REDIS_URL: redis://redis:6379
@@ -31,16 +29,37 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.4rb-anime.rule=Host(`4rbanime.com`,`www.4rbanime.com`,`4rbanime.fun`,`www.4rbanime.fun`)"
+      - "traefik.http.routers.4rb-anime.rule=Host(4rbanime.com,www.4rbanime.com,4rbanime.fun,www.4rbanime.fun)"
+      - "traefik.http.routers.4rb-anime.entrypoints=web"
       - "traefik.http.services.4rb-anime.loadbalancer.server.port=3000"
+    networks:
+      - web
 
   proxy:
     image: dovakiin0/proxy-m3u8:latest
-    ports:
-      - "4040:4040"
     environment:
       PORT: 4040
       CORS_DOMAIN: "localhost:3000,4rb-anime"
+    networks:
+      - web
+
+  traefik:
+    image: traefik:v2.11
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --entrypoints.web.address=:80
+    ports:
+      - "80:80"
+      - "8080:8080" # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - web
 
 volumes:
   redis_data:
+
+networks:
+  web:
+    driver: bridge
