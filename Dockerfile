@@ -3,7 +3,7 @@
 # ---------------------------------------------------
     
     
-    FROM node:20-alpine AS builder
+    FROM node:20.10.0-alpine AS builder
     LABEL org.opencontainers.image.title="4RB ANIME"
     LABEL org.opencontainers.image.description="Arabic Anime streaming service UI"
     LABEL org.opencontainers.image.maintainer="admin@4rb-anime.com"
@@ -23,6 +23,7 @@
     
     # Copy source and build application
     COPY  . . 
+    COPY .env.production .env
     RUN npm run build
     
     # ---------------------------------------------------
