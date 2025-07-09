@@ -2,7 +2,7 @@
 # 1. Build stage - install dependencies & build
 # ---------------------------------------------------
     
-    
+    ARG CACHE_BUST=1
     FROM node:20-alpine AS builder
     LABEL org.opencontainers.image.title="4RB ANIME"
     LABEL org.opencontainers.image.description="Arabic Anime streaming service UI"
