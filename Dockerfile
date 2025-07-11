@@ -25,7 +25,7 @@
     
     # Copy standalone build from builder
     COPY --from=builder /app/.next/standalone .
-    
+    COPY --from=builder /app/.next/static ./public/_next/static
     # Copy public static files
     COPY --from=builder /app/public ./public
     
