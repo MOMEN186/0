@@ -3,7 +3,7 @@ import {
   initializeApp,
   getApps,
   getApp,
-  FirebaseApp
+  FirebaseApp,
 } from "firebase/app";
 import { Auth, getAuth } from "firebase/auth";
 import { Firestore, getFirestore } from "firebase/firestore";
@@ -16,10 +16,16 @@ export interface FirebaseClients {
   analytics: Analytics | null;
 }
 
+let clients: FirebaseClients = {
+  app: null,
+  auth: null,
+  db: null,
+  analytics: null,
+};
+
 export function initFirebase(): FirebaseClients {
   if (typeof window === "undefined") {
-    // don’t initialize on server
-    return { app: null, auth: null, db: null, analytics: null };
+    return clients;
   }
 
   const {
@@ -30,7 +36,7 @@ export function initFirebase(): FirebaseClients {
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     NEXT_PUBLIC_FIREBASE_APP_ID,
     NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-  } = (window as any).__ENV;  // populated by <PublicEnvScript/>
+  } = (window as any).__ENV;
 
   const config = {
     apiKey: NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -43,12 +49,22 @@ export function initFirebase(): FirebaseClients {
   };
 
   const app =
-    getApps().length > 0
-      ? getApp()
-      : initializeApp(config);
+    getApps().length > 0 ? getApp() : initializeApp(config);
   const auth = getAuth(app);
   const db = getFirestore(app);
   const analytics = getAnalytics(app);
 
-  return { app, auth, db, analytics };
+  clients = { app, auth, db, analytics };
+  return clients;
 }
+
+// Eagerly initialize on module load if in browser
+if (typeof window !== "undefined") {
+  initFirebase();
+}
+
+// Export named for legacy imports
+export const app = clients.app;
+export const auth = clients.auth;
+export const db = clients.db;
+export const analytics = clients.analytics;
