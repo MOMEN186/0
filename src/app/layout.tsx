@@ -9,9 +9,12 @@ import { PublicEnvScript } from "next-runtime-env";
 import ThemeProvider  from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import ClientOnly from "@/components/ClientOnly";
-import FirebaseAuthProvider from "@/providers/fireBaseAuthProvider";
 import 'artplayer';                // brings in default skin via JS
-
+import dynamic from "next/dynamic";
+const FirebaseAuthProvider = dynamic(
+  () => import("@/providers/fireBaseAuthProvider"),
+  { ssr: false }
+);
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
