@@ -1,4 +1,4 @@
-version: "3.8"
+version: "3.9"
 
 services:
   redis:
@@ -13,59 +13,38 @@ services:
     networks:
       - web
 
+  proxy:
+    image: dovakiin0/proxy-m3u8:latest
+    environment:
+      PORT: 4040
+      REDIS_URL: redis://redis:6379
+      CORS_DOMAIN: "https://4rabanime.com,https://4rbanime.fun,http://localhost"
+    depends_on:
+      redis:
+        condition: service_healthy
+    expose:
+      - "4040"
+    networks:
+      - web
+
   4rb-anime:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        NODE_ENV: production
-    image: 4rb-anime/4rb-anime:latest
-    environment:
-      NEXT_PUBLIC_PROXY_URL: http://localhost:4040
-      REDIS_URL: redis://redis:6379
-      PROXY_INTERNAL_URL: http://proxy:4040
+        - NEXT_PUBLIC_PROXY_URL=/m3u8-proxy
+    env_file:
+      - .env.production
     depends_on:
       redis:
         condition: service_healthy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.4rb-anime.rule=Host(4rabanime.com,www.4rabanime.com,4rbanime.fun,www.4rbanime.fun)"
-      - "traefik.http.routers.4rb-anime.entrypoints=websecure"
-      - "traefik.http.routers.4rb-anime.tls.certresolver=myresolver"
-      - "traefik.http.services.4rb-anime.loadbalancer.server.port=3000"
-    networks:
-      - web
-
-  proxy:
-    image: dovakiin0/proxy-m3u8:latest
-    environment:
-      PORT: 4040
-      CORS_DOMAIN: "localhost:3000,4rb-anime"
-    networks:
-      - web
-
-  traefik:
-    image: traefik:v2.11
-    command:
-      - --api.dashboard=true
-      - --providers.docker=true
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.myresolver.acme.tlschallenge=true
-      - --certificatesresolvers.myresolver.acme.email=admin@4rb-anime.com
-      - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
-    ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080" # Optional Traefik dashboard
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./letsencrypt:/letsencrypt
+    expose:
+      - "3000"
     networks:
       - web
 
 volumes:
-  redis_data:
+  redis_data: {}
 
 networks:
   web:

@@ -1,43 +1,52 @@
-# ---------------------------------------------------
-# 1. Build stage - install dependencies & build
-# ---------------------------------------------------
-    ARG CACHE_BUST=1
+# ---------------------------
+# 1. Builder stage
+# ---------------------------
     FROM node:20-alpine AS builder
-    LABEL org.opencontainers.image.title="4RB ANIME"
-    LABEL org.opencontainers.image.description="Arabic Anime streaming service UI"
-    LABEL org.opencontainers.image.maintainer="admin@4rb-anime.com"
-    LABEL org.opencontainers.image.vendor="4rb-anime.com"
+
+    ARG NEXT_PUBLIC_PROXY_URL
+    ENV NEXT_PUBLIC_PROXY_URL=${NEXT_PUBLIC_PROXY_URL}
     
     WORKDIR /app
     
-    RUN apk add --no-cache --virtual .build-deps git openssh-client
-    
-    COPY package.json package-lock.json ./
+    COPY package*.json ./
     RUN npm ci
     
     COPY . .
     RUN npm run build
     
-    # ---------------------------------------------------
-    # 2. Runner stage - production optimized
-    # ---------------------------------------------------
+    # ---------------------------
+    # 2. Runner stage
+    # ---------------------------
     FROM node:20-alpine AS runner
+    
     WORKDIR /app
     RUN apk add --no-cache curl
     
     RUN addgroup -g 1001 -S nodejs \
-        && adduser -S nextjs -u 1001 -G nodejs
+     && adduser -S nextjs -u 1001 -G nodejs
     
+    # Copy only what's needed for the app to run
     COPY --from=builder /app/public ./public
-    COPY --from=builder /app/.next/standalone .next/standalone
+    COPY --from=builder /app/.next/standalone ./
     COPY --from=builder /app/.next/static ./.next/static
+    COPY --from=builder /app/node_modules ./node_modules
+    COPY --from=builder /app/package.json ./package.json
     
-    RUN mkdir -p /app/.next/cache && chown -R nextjs:nodejs /app/.next
+    # Add healthcheck route manually
+    RUN mkdir -p ./app/api/health && \
+        echo "export async function GET() { return new Response('OK', { status: 200 }) }" > ./app/api/health/route.js
+    
+    # Set permissions
+    RUN chown -R nextjs:nodejs /app
     USER nextjs
     
-    HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://127.0.0.1:3000/ || curl -f http://0.0.0.0:3000/ || exit 1
+    ENV NODE_ENV=production
+    ENV PORT=3000
+    ENV HOST=0.0.0.0
+    
+    HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+      CMD curl -f http://localhost:3000/api/health || exit 1
     
     EXPOSE 3000
+    CMD ["node", "server.js"]
     
-    CMD ["node", ".next/standalone/server.js", "--hostname", "0.0.0.0", "--port", "3000"]
