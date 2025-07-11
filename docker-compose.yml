@@ -1,15 +1,15 @@
 version: "3.9"
 
 services:
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+  4rb-anime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.production
+    # No published ports needed — Dokploy’s Traefik will route 3000
+    expose:
+      - "3000"
     networks:
       - web
 
@@ -18,33 +18,16 @@ services:
     environment:
       PORT: 4040
       REDIS_URL: redis://redis:6379
-      CORS_DOMAIN: "https://4rabanime.com,https://4rbanime.fun,http://localhost"
-    depends_on:
-      redis:
-        condition: service_healthy
+      CORS_DOMAIN: "https://4rabanime.com,https://4rabanime.fun"
     expose:
       - "4040"
     networks:
       - web
 
-  4rb-anime:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_PROXY_URL=/m3u8-proxy
-    env_file:
-      - .env.production
-    depends_on:
-      redis:
-        condition: service_healthy
-    expose:
-      - "3000"
+  redis:
+    image: redis:7-alpine
     networks:
       - web
-
-volumes:
-  redis_data: {}
 
 networks:
   web:
