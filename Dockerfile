@@ -1,36 +1,46 @@
-# 1) Build
-FROM node:20-alpine AS builder
-WORKDIR /app
+# ---------------------------------------------------
+# 1) Builder stage – install deps & build
+# ---------------------------------------------------
+    FROM node:20-alpine AS builder
 
-# Install deps
-COPY package.json package-lock.json ./
-RUN npm ci
-
-# Copy source & build
-COPY . .
-RUN npm run build
-
-# 2) Runtime
-FROM node:20-alpine
-WORKDIR /app
-
-# Install production deps only
-COPY package.json package-lock.json ./
-RUN npm ci --production
-
-# Copy built output
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/next.config.mjs ./
-COPY --from=builder /app/package.json ./ 
-
-# Ensure we bind to all interfaces
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV HOST=0.0.0.0
-
-EXPOSE 3000
-
-# Use Next’s built-in start command
-CMD ["npm", "start"]
+    # Build-time proxy URL arg (only used at build)
+    ARG NEXT_PUBLIC_PROXY_URL
+    ENV NEXT_PUBLIC_PROXY_URL=${NEXT_PUBLIC_PROXY_URL}
+    
+    WORKDIR /app
+    
+    # Install dev & production deps
+    COPY package.json package-lock.json ./
+    RUN npm ci
+    
+    # Copy source & build
+    COPY . .
+    RUN npm run build
+    
+    # ---------------------------------------------------
+    # 2) Runner stage – production
+    # ---------------------------------------------------
+    FROM node:20-alpine AS runner
+    
+    WORKDIR /app
+    
+    # Pull in only production deps
+    COPY package.json package-lock.json ./
+    RUN npm ci --production
+    
+    # Copy built output from builder
+    COPY --from=builder /app/.next ./.next
+    COPY --from=builder /app/public ./public
+    COPY --from=builder /app/node_modules ./node_modules
+    COPY --from=builder /app/next.config.mjs ./
+    
+    # Bind to all interfaces
+    ENV NODE_ENV=production
+    ENV HOST=0.0.0.0
+    ENV PORT=3000
+    
+    EXPOSE 3000
+    
+    # Start with Next.js built‑in server
+    CMD ["npx", "next", "start", "-H", "0.0.0.0", "-p", "3000"]
+    
