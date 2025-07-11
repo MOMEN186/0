@@ -9,23 +9,22 @@ import { Auth, getAuth } from "firebase/auth";
 import { Firestore, getFirestore } from "firebase/firestore";
 import { Analytics, getAnalytics } from "firebase/analytics";
 
+/**
+ * Describes the initialized Firebase clients.
+ */
 export interface FirebaseClients {
-  app: FirebaseApp | null;
-  auth: Auth | null;
-  db: Firestore | null;
-  analytics: Analytics | null;
+  app: FirebaseApp;
+  auth: Auth;
+  db: Firestore;
+  analytics: Analytics;
 }
 
-let clients: FirebaseClients = {
-  app: null,
-  auth: null,
-  db: null,
-  analytics: null,
-};
-
-export function initFirebase(): FirebaseClients {
+/**
+ * Initializes Firebase and returns the clients. Must be called on the client.
+ */
+export function initFirebase(): FirebaseClients | null {
   if (typeof window === "undefined") {
-    return clients;
+    return null;
   }
 
   const {
@@ -48,23 +47,11 @@ export function initFirebase(): FirebaseClients {
     measurementId: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
   };
 
-  const app =
-    getApps().length > 0 ? getApp() : initializeApp(config);
+  // Initialize or reuse existing app
+  const app = getApps().length > 0 ? getApp() : initializeApp(config);
   const auth = getAuth(app);
   const db = getFirestore(app);
   const analytics = getAnalytics(app);
 
-  clients = { app, auth, db, analytics };
-  return clients;
+  return { app, auth, db, analytics };
 }
-
-// Eagerly initialize on module load if in browser
-if (typeof window !== "undefined") {
-  initFirebase();
-}
-
-// Export named for legacy imports
-export const app = clients.app;
-export const auth = clients.auth;
-export const db = clients.db;
-export const analytics = clients.analytics;

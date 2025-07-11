@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase/firebase";
+import { useFirebase } from "@/providers/fireBaseAuthProvider";
 import { collection, query, where, getDocs, Timestamp } from "firebase/firestore";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -13,6 +13,7 @@ export interface WatchHistoryEntry {
 }
 
 export function useWatchHistory() {
+  const { db } = useFirebase()!;
   const [watchHistory, setWatchHistory] = useState<WatchHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

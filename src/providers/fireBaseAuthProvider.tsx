@@ -1,10 +1,13 @@
 // src/providers/FirebaseAuthProvider.tsx
 "use client";
 
-import { useEffect, useState, ReactNode } from "react";
+import { useEffect, useState, ReactNode, useContext, createContext } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { useAuthStore } from "@/store/auth-store";
 import { initFirebase, FirebaseClients } from "@/lib/firebase/firebase";
+
+export const FirebaseContext = createContext<FirebaseClients | null>(null);
+export const useFirebase = () => useContext(FirebaseContext);
 
 export default function FirebaseAuthProvider({
   children,
@@ -14,21 +17,20 @@ export default function FirebaseAuthProvider({
   const setAuth = useAuthStore((s) => s.setAuth);
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
-  // track Firebase clients, typed correctly
-  const [clients, setClients] = useState<FirebaseClients>({
-    app: null,
-    auth: null,
-    db: null,
-    analytics: null,
-  });
+  // track Firebase clients
+  const [clients, setClients] = useState<FirebaseClients | null>(null);
 
   useEffect(() => {
-    const next = initFirebase();
-    setClients(next);
+    if(typeof window === "undefined") return;
+   
+    try {
+      const nextClients = initFirebase();
+      if (!nextClients) return;
+      setClients(nextClients);
 
-    if (next.auth) {
+      const { auth } = nextClients;
       const unsubscribe = onAuthStateChanged(
-        next.auth,
+        auth,
         (user: User | null) => {
           if (user) {
             setAuth({
@@ -44,11 +46,19 @@ export default function FirebaseAuthProvider({
         }
       );
       return () => unsubscribe();
+    } catch (error) {
+      console.error("Firebase initialization failed:", error);
     }
   }, [setAuth, clearAuth]);
 
-  // don’t render children until auth client is ready
-  if (!clients.auth) return null;
+  // Wait until Firebase client is ready
+  if (!clients) {
+    return null;
+  }
 
-  return <>{children}</>;
+  return (
+    <FirebaseContext.Provider value={clients}>
+      {children}
+    </FirebaseContext.Provider>
+  );
 }

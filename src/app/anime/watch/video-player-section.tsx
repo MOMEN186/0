@@ -10,7 +10,6 @@ import { useGetEpisodeServers } from "@/query/get-episode-servers";
 import { useAuthStore } from "@/store/auth-store";
 import Advertisement from "@/components/ads";
 import { getFallbackServer } from "@/utils/video";
-import { db } from "@/lib/firebase/firebase";
 import {
   doc,
   updateDoc,
@@ -19,8 +18,10 @@ import {
   collection,
   getDocs,
 } from "firebase/firestore";
+import { useFirebase } from "@/providers/fireBaseAuthProvider";
 
 const VideoPlayerSection = () => {
+  const { db } = useFirebase()!;
   const { selectedEpisode, anime } = useAnimeStore();
   const { data: serversData } = useGetEpisodeServers(selectedEpisode);
 

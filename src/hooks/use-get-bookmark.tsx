@@ -11,7 +11,7 @@ import {
   limit,
   getCountFromServer,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/firebase";
+import { useFirebase } from "@/providers/fireBaseAuthProvider";
 import { useAuthStore } from "@/store/auth-store";
 import { toast } from "sonner";
 
@@ -37,6 +37,8 @@ interface BookmarkHookParams {
 }
 
 function useFirebaseBookmarks(params?: BookmarkHookParams | string) {
+  const {db}=useFirebase()!;
+  
   const { auth } = useAuthStore();
   const [bookmarks, setBookmarks] = useState<BookmarkData[]>([]);
   const [loading, setLoading] = useState(false);

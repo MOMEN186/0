@@ -11,6 +11,7 @@ import { Toaster } from "@/components/ui/sonner";
 import ClientOnly from "@/components/ClientOnly";
 import 'artplayer';                // brings in default skin via JS
 import dynamic from "next/dynamic";
+
 const FirebaseAuthProvider = dynamic(
   () => import("@/providers/fireBaseAuthProvider"),
   { ssr: false }
@@ -56,6 +57,8 @@ export const metadata: Metadata = {
     description: APP_DESCRIPTION,
   },
 };
+
+
 
 export default function RootLayout({
   children,

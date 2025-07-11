@@ -7,7 +7,7 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar";
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { app } from "@/lib/firebase/firebase"; // adjust path if needed
+import { useFirebase } from "@/providers/fireBaseAuthProvider";
 
 type Props = {
   url?: string; // filename, e.g., "avatar.jpg"
@@ -18,6 +18,7 @@ type Props = {
 };
 
 function Avatar({ url, username, id, className, onClick }: Props) {
+  const { app } = useFirebase()!;
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
 
   useEffect(() => {
