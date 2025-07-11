@@ -42,5 +42,5 @@
     EXPOSE 3000
     
     # Start with Next.js built‑in server
-    CMD ["npx", "next", "start", "-H", "0.0.0.0", "-p", "3000"]
+    CMD ["node", "server.js", "--hostname", "0.0.0.0", "--port", "3000"]
     
