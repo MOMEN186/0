@@ -1,32 +1,54 @@
 // src/providers/FirebaseAuthProvider.tsx
 "use client";
 
-import { useEffect } from "react";
-import { onAuthStateChanged, getAuth } from "firebase/auth";
+import { useEffect, useState, ReactNode } from "react";
+import { onAuthStateChanged, User } from "firebase/auth";
 import { useAuthStore } from "@/store/auth-store";
+import { initFirebase, FirebaseClients } from "@/lib/firebase/firebase";
 
-export default function FirebaseAuthProvider({ children }: { children: React.ReactNode }) {
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const clearAuth = useAuthStore((state) => state.clearAuth);
+export default function FirebaseAuthProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+
+  // track Firebase clients, typed correctly
+  const [clients, setClients] = useState<FirebaseClients>({
+    app: null,
+    auth: null,
+    db: null,
+    analytics: null,
+  });
 
   useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setAuth({
-          id: user.uid,
-          email: user.email || "",
-          displayName: user.displayName || "",
-          photoURL: user.photoURL || "",
-          autoSkip: false,
-        });
-      } else {
-        clearAuth();
-      }
-    });
+    const next = initFirebase();
+    setClients(next);
 
-    return () => unsubscribe();
+    if (next.auth) {
+      const unsubscribe = onAuthStateChanged(
+        next.auth,
+        (user: User | null) => {
+          if (user) {
+            setAuth({
+              id: user.uid,
+              email: user.email || "",
+              displayName: user.displayName || "",
+              photoURL: user.photoURL || "",
+              autoSkip: false,
+            });
+          } else {
+            clearAuth();
+          }
+        }
+      );
+      return () => unsubscribe();
+    }
   }, [setAuth, clearAuth]);
+
+  // don’t render children until auth client is ready
+  if (!clients.auth) return null;
 
   return <>{children}</>;
 }
