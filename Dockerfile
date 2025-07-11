@@ -3,12 +3,7 @@
 # ---------------------------------------------------
     FROM node:20-alpine AS builder
 
-    # Build-time arg for proxy URL
-    ARG NEXT_PUBLIC_PROXY_URL
-    ENV NEXT_PUBLIC_PROXY_URL=${NEXT_PUBLIC_PROXY_URL}
-    
     WORKDIR /app
-    
     # Install dependencies
     COPY package.json package-lock.json ./
     RUN npm ci
@@ -28,25 +23,27 @@
     RUN addgroup -g 1001 -S nodejs \
      && adduser -S nextjs -u 1001 -G nodejs
     
-    # Copy built standalone output
-    COPY --from=builder /app/.next/standalone /app
-    # Copy static assets
+    # Copy standalone build from builder
+    COPY --from=builder /app/.next/standalone .
+    
+    # Copy public static files
     COPY --from=builder /app/public ./public
     
-    # Switch to non-root
+    # Ensure we have minimal dependencies (if any extras)
+    # Note: standalone build already includes required node_modules
+    
+    # Ownership and permissions
+    RUN chown -R nextjs:nodejs /app
     USER nextjs
     
-    # Environment
+    # Configure environment
     ENV NODE_ENV=production
     ENV PORT=3000
     ENV HOST=0.0.0.0
     
-    # Healthcheck (optional)
-    # HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    #   CMD curl -f http://localhost:3000/api/health || exit 1
-    
+    # Expose app port
     EXPOSE 3000
     
-    # Start the standalone server
+    # Start the standalone server built by Next.js
     CMD ["node", "server.js", "--hostname", "0.0.0.0", "--port", "3000"]
     
