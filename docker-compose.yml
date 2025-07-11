@@ -23,6 +23,22 @@ services:
       - "4040"
     networks:
       - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.middlewares.strip-proxy.stripprefix.prefixes=/m3u8-proxy"
+
+      # —— Inject CORS headers ——
+      - "traefik.http.middlewares.proxy-cors.headers.customresponseheaders.Access-Control-Allow-Origin=https://4rabanime.com"
+      - "traefik.http.middlewares.proxy-cors.headers.customresponseheaders.Access-Control-Allow-Methods=GET,OPTIONS"
+      - "traefik.http.middlewares.proxy-cors.headers.customresponseheaders.Access-Control-Allow-Headers=Origin,Accept,Content-Type"
+
+      # 🔒 HTTPS router
+      - "traefik.http.routers.proxy.rule=Host(`4rabanime.com`,`4rabanime.fun`) && PathPrefix(`/m3u8-proxy`)"
+      - "traefik.http.routers.proxy.entrypoints=websecure"
+      - "traefik.http.routers.proxy.tls=true"
+      - "traefik.http.routers.proxy.middlewares=strip-proxy,proxy-cors"
+      - "traefik.http.services.proxy.loadbalancer.server.port=4040"
 
   redis:
     image: redis:7-alpine
