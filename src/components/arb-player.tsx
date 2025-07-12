@@ -36,14 +36,14 @@ const ArbPlayer: React.FC<ArbPlayerProps> = ({
     // Cleanup previous instances
     playerRef.current?.destroy();
     hlsRef.current?.destroy();
-    if (containerRef.current) containerRef.current.innerHTML = "";
+    if (containerRef.current) containerRef.current.innerHTML = '';
 
     if (!src || !containerRef.current) return;
 
     // Build proxied URL
     const raw = env("NEXT_PUBLIC_PROXY_URL") || "";
-const baseURI = raw.replace(/\/+$/, "").replace(/\/m3u8$/, ""); // ensure no trailing slash or double /m3u8
-const proxiedSrc = `${baseURI}/m3u8?url=${encodeURIComponent(src)}&referer=${encodeURIComponent(referer)}`;
+    const baseURI = raw.replace(/\/+$/, "") + "/m3u8-proxy";
+    const proxiedSrc = `${baseURI}?url=${encodeURIComponent(src)}&referer=${encodeURIComponent(referer)}`;
 
     // Initialize Artplayer without HLS-control plugin yet
     const art = new Artplayer({
@@ -52,13 +52,7 @@ const proxiedSrc = `${baseURI}/m3u8?url=${encodeURIComponent(src)}&referer=${enc
       poster: posterUrl,
       autoplay: false,
       plugins: [
-        artplayerPluginAmbilight({
-          blur: "10px",
-          opacity: 0.5,
-          frequency: 100,
-          zIndex: 1,
-          duration: 1000,
-        }),
+        artplayerPluginAmbilight({ blur: '10px', opacity: 0.5, frequency: 100, zIndex: 1, duration: 1000 }),
       ],
     });
     playerRef.current = art;
@@ -78,7 +72,7 @@ const proxiedSrc = `${baseURI}/m3u8?url=${encodeURIComponent(src)}&referer=${enc
       hlsControl(art);
 
       hls.on(Hls.Events.ERROR, (_event, data) => {
-        console.error("HLS.js error", data);
+        console.error('HLS.js error', data);
       });
     } else {
       // Fallback for native HLS support
@@ -95,13 +89,7 @@ const proxiedSrc = `${baseURI}/m3u8?url=${encodeURIComponent(src)}&referer=${enc
     return <div className={className}>Loading video…</div>;
   }
 
-  return (
-    <div
-      ref={containerRef}
-      className={className}
-      style={{ width: "100%", height: "100%" }}
-    />
-  );
+  return <div ref={containerRef} className={className} style={{ width: '100%', height: '100%' }} />;
 };
 
 export default ArbPlayer;
