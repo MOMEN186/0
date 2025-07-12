@@ -18,14 +18,15 @@ services:
       - dokploy-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.proxy.rule=Host(`4rabanime.fun`, `4rbanime.com`, `4rbanime.fun`) && PathPrefix(`/m3u8-proxy`)"
-      - "traefik.http.routers.proxy.priority=10"
+      - "traefik.http.routers.proxy.rule=(Host(`4rabanime.fun`, `4rbanime.com`, `4rbanime.fun`) && PathPrefix(`/m3u8-proxy`))"
+      - "traefik.http.routers.proxy.priority=100"
       - "traefik.http.routers.proxy.entrypoints=websecure"
       - "traefik.http.routers.proxy.tls=true"
-      - "traefik.http.routers.proxy.tls.certresolver=letsencrypt"  # Changed to match your Traefik config
+      - "traefik.http.routers.proxy.tls.certresolver=letsencrypt"
       - "traefik.http.services.proxy.loadbalancer.server.port=4040"
-      - "traefik.http.middlewares.strip-m3u8-prefix.stripprefix.prefixes=/m3u8-proxy"
-      - "traefik.http.routers.proxy.middlewares=strip-m3u8-prefix"
+      - "traefik.http.middlewares.proxy-strip.stripprefix.prefixes=/m3u8-proxy"
+      - "traefik.http.middlewares.proxy-strip.stripprefix.forceslash=true"
+      - "traefik.http.routers.proxy.middlewares=proxy-strip@docker"
 
   4rb-anime:
     build:
@@ -39,11 +40,13 @@ services:
       - dokploy-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`4rabanime.fun`, `4rbanime.com`, `4rbanime.fun`) && !PathPrefix(`/m3u8-proxy`)"
+      - "traefik.http.routers.app.rule=(Host(`4rabanime.fun`, `4rbanime.com`, `4rbanime.fun`) && !PathPrefix(`/m3u8-proxy`))"
+      - "traefik.http.routers.app.priority=50"
       - "traefik.http.routers.app.entrypoints=websecure"
       - "traefik.http.routers.app.tls=true"
-      - "traefik.http.routers.app.tls.certresolver=letsencrypt"  # Changed to match your Traefik config
+      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
       - "traefik.http.services.app.loadbalancer.server.port=3000"
+      - "traefik.http.routers.app.middlewares=redirect-to-https@file"
 
   redis:
     image: redis:7-alpine
