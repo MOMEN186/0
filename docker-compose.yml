@@ -2,34 +2,42 @@ version: "3.9"
 
 services:
   proxy:
-    image: dovakiin0/proxy-m3u8:latest
+    build:
+      context: ./proxy/proxy-m3u8
+      dockerfile: Dockerfile
+      args:
+        TARGETOS: linux
+        TARGETARCH: amd64
     environment:
       PORT: 4040
       REDIS_URL: "redis://redis:6379"
-      CORS_DOMAIN: "https://4rbanime.fun,https://4rabanime.com"
+      CORS_DOMAIN: "https://4rabanime.fun,https://4rabanime.com"
     expose:
       - "4040"
-    networks: [web]
+    networks:
+      - web
     labels:
       - "traefik.enable=true"
-      # Remove prefix stripping since we're using exact path matching
-      - "traefik.http.routers.proxy.rule=Host(`4rbanime.fun`,`4rabanime.com`) && Path(`/m3u8-proxy`)"  # Changed to exact path match
+      - >
+        traefik.http.routers.proxy.rule=Host(`4rbanime.fun`,`4rabanime.com`)
+        && PathPrefix(`/m3u8-proxy`)
       - "traefik.http.routers.proxy.entrypoints=websecure"
       - "traefik.http.routers.proxy.tls=true"
       - "traefik.http.routers.proxy.tls.certresolver=myresolver"
       - "traefik.http.services.proxy.loadbalancer.server.port=4040"
+      - "traefik.http.middlewares.strip-m3u8-prefix.stripprefix.prefixes=/m3u8-proxy"
+      - "traefik.http.routers.proxy.middlewares=strip-m3u8-prefix"
 
   4rb-anime:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_PROXY_URL: https://4rbanime.fun  # Keep base URL
     env_file:
       - .env.production
     expose:
       - "3000"
-    networks: [web]
+    networks:
+      - web
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app.rule=Host(`4rbanime.fun`,`4rabanime.com`)"
@@ -40,7 +48,8 @@ services:
 
   redis:
     image: redis:7-alpine
-    networks: [web]
+    networks:
+      - web
 
 networks:
   web:
