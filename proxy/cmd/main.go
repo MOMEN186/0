@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -16,18 +17,24 @@ import (
 	mdlware "github.com/dovakiin0/proxy-m3u8/internal/middleware"
 )
 
+var (
+	// Version will be set at build time
+	Version = "dev"
+)
+
 func init() {
-	// Load environment variables from .env file
-	if err := godotenv.Load(); err != nil {
-		fmt.Printf("Warning: Could not load .env file: %v\n", err)
+	// Load environment variables
+	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
+		fmt.Printf("Error loading .env file: %v\n", err)
 	}
 
 	// Initialize configuration
 	config.InitConfig()
 
-	// Initialize Redis connection
+	// Initialize Redis
 	if err := config.RedisConnect(); err != nil {
-		panic(fmt.Sprintf("Failed to connect to Redis: %v", err))
+		fmt.Printf("Redis connection error: %v\n", err)
+		os.Exit(1)
 	}
 }
 
@@ -37,17 +44,19 @@ func main() {
 	e.Server.ReadTimeout = 30 * time.Second
 	e.Server.WriteTimeout = 30 * time.Second
 
-	// Middleware
+	// Middleware stack
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 		Format: `${time_rfc3339} | ${status} | ${method} ${uri} | ${latency_human}` + "\n",
 	}))
-	e.Use(middleware.Recover())
+	e.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{
+		DisablePrintStack: true,
+	}))
 	e.Use(middleware.Secure())
 	e.Pre(middleware.RemoveTrailingSlash())
 
-	// CORS Configuration
+	// CORS configuration
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins:     getCorsDomains(),
+		AllowOrigins:     parseCorsDomains(),
 		AllowMethods:     []string{http.MethodGet, http.MethodHead, http.MethodOptions},
 		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -55,9 +64,9 @@ func main() {
 		MaxAge:           3600,
 	}))
 
-	// Cache Control Middleware
+	// Cache control middleware
 	e.Use(mdlware.CacheControlWithConfig(mdlware.CacheControlConfig{
-		MaxAge:         3600, // 1 hour
+		MaxAge:         3600,
 		Public:         true,
 		MustRevalidate: true,
 	}))
@@ -69,53 +78,59 @@ func main() {
 
 	// Start server
 	serverAddr := fmt.Sprintf(":%s", config.Env.Port)
-	e.Logger.Infof("Starting server on %s", serverAddr)
+	e.Logger.Infof("Starting M3U8 Proxy v%s on %s", Version, serverAddr)
 	
 	if err := e.Start(serverAddr); err != nil && err != http.ErrServerClosed {
-		e.Logger.Fatal("Shutting down the server: ", err)
+		e.Logger.Fatal("Shutting down server: ", err)
 	}
 }
 
-// Health check endpoint
 func healthCheck(c echo.Context) error {
-	// Check Redis connection if needed
-	if _, err := config.Redis.Ping(c.Request().Context()).Result(); err != nil {
-		return c.JSON(http.StatusServiceUnavailable, map[string]string{
-			"status":  "unhealthy",
-			"message": "Redis connection failed",
-		})
+	// Check Redis connection
+	if config.Redis != nil {
+		if _, err := config.Redis.Ping(c.Request().Context()).Result(); err != nil {
+			return c.JSON(http.StatusServiceUnavailable, map[string]interface{}{
+				"status":  "unhealthy",
+				"error":   "Redis connection failed",
+				"version": Version,
+			})
+		}
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{
+	return c.JSON(http.StatusOK, map[string]interface{}{
 		"status":  "healthy",
-		"version": config.Env.Version,
+		"version": Version,
 	})
 }
 
-// Debug endpoint to verify routing and middleware
 func debugHandler(c echo.Context) error {
+	redisStatus := "disconnected"
+	if config.Redis != nil {
+		if _, err := config.Redis.Ping(c.Request().Context()).Result(); err == nil {
+			redisStatus = "connected"
+		}
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"service":    "m3u8-proxy",
-		"timestamp":  time.Now().UTC(),
-		"request": map[string]interface{}{
-			"method":     c.Request().Method,
-			"path":       c.Request().URL.Path,
-			"query":      c.QueryParams(),
-			"headers":    c.Request().Header,
-			"remote_ip":  c.RealIP(),
-			"user_agent": c.Request().UserAgent(),
-		},
+		"service":   "m3u8-proxy",
+		"version":   Version,
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
 		"config": map[string]interface{}{
 			"port":       config.Env.Port,
 			"cors":       config.Env.CorsDomain,
-			"redis":      config.Redis != nil,
-			"version":    config.Env.Version,
+			"redis":      redisStatus,
+		},
+		"request": map[string]interface{}{
+			"method":    c.Request().Method,
+			"path":      c.Request().URL.Path,
+			"query":     c.QueryParams(),
+			"headers":   c.Request().Header,
+			"client_ip": c.RealIP(),
 		},
 	})
 }
 
-// Helper function to parse CORS domains
-func getCorsDomains() []string {
+func parseCorsDomains() []string {
 	corsDomain := strings.TrimSpace(config.Env.CorsDomain)
 
 	if corsDomain == "*" {
@@ -123,7 +138,7 @@ func getCorsDomains() []string {
 	}
 
 	domains := strings.Split(corsDomain, ",")
-	var allowOrigins []string
+	var result []string
 
 	for _, domain := range domains {
 		domain = strings.TrimSpace(domain)
@@ -131,16 +146,20 @@ func getCorsDomains() []string {
 			continue
 		}
 
-		// Ensure proper URL format
-		if !strings.HasPrefix(domain, "http://") && !strings.HasPrefix(domain, "https://") {
-			allowOrigins = append(allowOrigins, 
+		// Add both http and https versions if not specified
+		if !strings.HasPrefix(domain, "http") {
+			result = append(result, 
 				"https://"+strings.TrimSuffix(domain, "/"),
 				"http://"+strings.TrimSuffix(domain, "/"),
 			)
 		} else {
-			allowOrigins = append(allowOrigins, strings.TrimSuffix(domain, "/"))
+			// Ensure consistent formatting
+			domain = strings.TrimSuffix(domain, "/")
+			if !strings.HasSuffix(domain, "/") {
+				result = append(result, domain)
+			}
 		}
 	}
 
-	return allowOrigins
+	return result
 }
