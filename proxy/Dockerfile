@@ -1,6 +1,9 @@
 # Build stage
 FROM golang:1.24-alpine AS builder
 
+# Install Git for version information
+RUN apk add --no-cache git
+
 WORKDIR /app
 
 # Download dependencies first for better caching
@@ -14,10 +17,11 @@ COPY . .
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 
-# Build application
+# Build application (fallback version if git not available)
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    go build -ldflags="-w -s -X main.Version=$(git describe --tags --always)" \
-    -o /app/server cmd/main.go
+    sh -c 'version=$(git describe --tags --always 2>/dev/null || echo "dev"); \
+    go build -ldflags="-w -s -X main.Version=$version" \
+    -o /app/server cmd/main.go'
 
 # Runtime stage
 FROM alpine:latest
@@ -53,4 +57,3 @@ EXPOSE 4040
 
 # Run the application
 ENTRYPOINT ["/app/server"]
-CMD ["--port", "4040"]

@@ -10,7 +10,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/redis/go-redis/v9"
 
 	"github.com/dovakiin0/proxy-m3u8/config"
 	"github.com/dovakiin0/proxy-m3u8/internal/handler"
@@ -30,12 +29,6 @@ func init() {
 
 	// Initialize configuration
 	config.InitConfig()
-
-	// Initialize Redis
-	if err := config.RedisConnect(); err != nil {
-		fmt.Printf("Redis connection error: %v\n", err)
-		os.Exit(1)
-	}
 }
 
 func main() {
@@ -86,17 +79,6 @@ func main() {
 }
 
 func healthCheck(c echo.Context) error {
-	// Check Redis connection
-	if config.Redis != nil {
-		if _, err := config.Redis.Ping(c.Request().Context()).Result(); err != nil {
-			return c.JSON(http.StatusServiceUnavailable, map[string]interface{}{
-				"status":  "unhealthy",
-				"error":   "Redis connection failed",
-				"version": Version,
-			})
-		}
-	}
-
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"status":  "healthy",
 		"version": Version,
@@ -104,13 +86,6 @@ func healthCheck(c echo.Context) error {
 }
 
 func debugHandler(c echo.Context) error {
-	redisStatus := "disconnected"
-	if config.Redis != nil {
-		if _, err := config.Redis.Ping(c.Request().Context()).Result(); err == nil {
-			redisStatus = "connected"
-		}
-	}
-
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"service":   "m3u8-proxy",
 		"version":   Version,
@@ -118,7 +93,6 @@ func debugHandler(c echo.Context) error {
 		"config": map[string]interface{}{
 			"port":       config.Env.Port,
 			"cors":       config.Env.CorsDomain,
-			"redis":      redisStatus,
 		},
 		"request": map[string]interface{}{
 			"method":    c.Request().Method,
