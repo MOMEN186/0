@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   proxy:
     build:
@@ -19,8 +17,7 @@ services:
     labels:
       - "traefik.enable=true"
       - >
-        traefik.http.routers.proxy.rule=Host(`4rbanime.fun`,`4rabanime.com`)
-        && PathPrefix(`/m3u8-proxy`)
+        traefik.http.routers.proxy.rule=Host(`4rbanime.fun`) && PathPrefix(`/m3u8-proxy`)
       - "traefik.http.routers.proxy.entrypoints=websecure"
       - "traefik.http.routers.proxy.tls=true"
       - "traefik.http.routers.proxy.tls.certresolver=myresolver"
