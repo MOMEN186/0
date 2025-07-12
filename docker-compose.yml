@@ -1,47 +1,52 @@
 version: "3.9"
 
 services:
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file:
-      - .env.production
-    expose:
-      - "3000"
-    networks:
-      - web
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`4rbanime.fun`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.tls=true"
-      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
-
+  # —— your m3u8 Go proxy ——
   proxy:
     image: dovakiin0/proxy-m3u8:latest
     environment:
-      PORT: 4040
-      REDIS_URL: redis://redis:6379
-      CORS_DOMAIN: "https://4rabanime.fun,https://4rabanime.com"
+      PORT:    4040
+      REDIS_URL: "redis://redis:6379"
+      # restrict CORS to your actual domains
+      CORS_DOMAIN: "https://4rbanime.fun,https://4rabanime.com"
     expose:
       - "4040"
-    networks:
-      - web
+    networks: [web]
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=web"
-      - "traefik.http.routers.proxy.rule=Host(`4rabanime.fun`) && PathPrefix(`/m3u8-proxy`)"
+      # strip `/m3u8-proxy` before forwarding to the Go server
+      - "traefik.http.middlewares.strip-proxy.stripprefix.prefixes=/m3u8-proxy"
+      - "traefik.http.routers.proxy.rule=Host(`4rbanime.fun`,`4rabanime.com`) && PathPrefix(`/m3u8-proxy`)"
       - "traefik.http.routers.proxy.entrypoints=websecure"
       - "traefik.http.routers.proxy.tls=true"
-      - "traefik.http.services.proxy.loadbalancer.server.port=4040"
-      - "traefik.http.middlewares.strip-proxy.stripprefix.prefixes=/m3u8-proxy"
+      - "traefik.http.routers.proxy.tls.certresolver=myresolver"
       - "traefik.http.routers.proxy.middlewares=strip-proxy"
+      - "traefik.http.services.proxy.loadbalancer.server.port=4040"
 
+  # —— your Next.js app ——
+  4rb-anime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_PROXY_URL: https://4rbanime.fun
+    env_file:
+      - .env.production      # make sure this file isn’t checked in, but contains your other NEXT_PUBLIC_* vars
+    expose:
+      - "3000"
+    networks: [web]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`4rbanime.fun`,`4rabanime.com`)"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls=true"
+      - "traefik.http.routers.app.tls.certresolver=myresolver"
+      - "traefik.http.services.app.loadbalancer.server.port=3000"
+
+  # —— redis for the proxy if you need it ——  
   redis:
     image: redis:7-alpine
-    networks:
-      - web
+    networks: [web]
 
 networks:
   web:
