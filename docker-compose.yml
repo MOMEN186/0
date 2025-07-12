@@ -3,7 +3,7 @@ version: "3.9"
 services:
   proxy:
     build:
-      context: ./proxy/proxy-m3u8
+      context: ./proxy
       dockerfile: Dockerfile
       args:
         TARGETOS: linux
@@ -18,13 +18,16 @@ services:
       - web
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.proxy.rule=PathPrefix(`/m3u8-proxy`)"
+      - >
+        traefik.http.routers.proxy.rule=Host(`4rbanime.fun`, `4rabanime.com`)
+        && PathPrefix(`/m3u8-proxy`)
       - "traefik.http.routers.proxy.entrypoints=websecure"
       - "traefik.http.routers.proxy.tls=true"
       - "traefik.http.routers.proxy.tls.certresolver=myresolver"
       - "traefik.http.services.proxy.loadbalancer.server.port=4040"
       - "traefik.http.middlewares.strip-m3u8-prefix.stripprefix.prefixes=/m3u8-proxy"
       - "traefik.http.routers.proxy.middlewares=strip-m3u8-prefix"
+
 
   4rb-anime:
     build:
