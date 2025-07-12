@@ -5,29 +5,36 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_PROXY_URL: https://4rabanime.fun
     env_file:
       - .env.production
-    # No published ports needed — Dokploy's Traefik will route 3000
     expose:
       - "3000"
     networks:
-      - web
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.app.rule=Host(`4rabanime.com`, `4rbanime.fun`)"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls=true"
+      - "traefik.http.services.app.loadbalancer.server.port=3000"
 
   proxy:
     image: dovakiin0/proxy-m3u8:latest
     environment:
       PORT: 4040
       REDIS_URL: redis://redis:6379
-      # Fixed CORS domains to match your actual domains
       CORS_DOMAIN: "https://4rabanime.com,https://4rbanime.fun"
     expose:
       - "4040"
     networks:
-      - web
+      - dokploy-network
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=web"
-      
+      - "traefik.docker.network=dokploy-network"
+
       # —— CORS middleware ——
       - "traefik.http.middlewares.proxy-cors.headers.customresponseheaders.Access-Control-Allow-Origin=*"
       - "traefik.http.middlewares.proxy-cors.headers.customresponseheaders.Access-Control-Allow-Methods=GET,OPTIONS,POST"
@@ -37,14 +44,14 @@ services:
       # —— Path stripping middleware ——
       - "traefik.http.middlewares.strip-proxy.stripprefix.prefixes=/m3u8-proxy"
 
-      # 🔒 HTTPS router for m3u8-proxy
+      # 🔒 HTTPS route for m3u8-proxy
       - "traefik.http.routers.proxy.rule=Host(`4rabanime.com`,`4rbanime.fun`) && PathPrefix(`/m3u8-proxy`)"
       - "traefik.http.routers.proxy.entrypoints=websecure"
       - "traefik.http.routers.proxy.tls=true"
       - "traefik.http.routers.proxy.middlewares=strip-proxy,proxy-cors"
       - "traefik.http.services.proxy.loadbalancer.server.port=4040"
 
-      # HTTP redirect to HTTPS
+      # HTTP ➜ HTTPS redirect
       - "traefik.http.routers.proxy-http.rule=Host(`4rabanime.com`,`4rbanime.fun`) && PathPrefix(`/m3u8-proxy`)"
       - "traefik.http.routers.proxy-http.entrypoints=web"
       - "traefik.http.routers.proxy-http.middlewares=https-redirect"
@@ -53,8 +60,8 @@ services:
   redis:
     image: redis:7-alpine
     networks:
-      - web
+      - dokploy-network
 
 networks:
-  web:
+  dokploy-network:
     external: true
