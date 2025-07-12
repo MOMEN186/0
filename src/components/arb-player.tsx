@@ -42,8 +42,9 @@ const ArbPlayer: React.FC<ArbPlayerProps> = ({
 
     // Build proxied URL
     const raw = env("NEXT_PUBLIC_PROXY_URL") || "";
-    const baseURI = raw.replace(/\/+$/, "") + "/m3u8-proxy";
+    const baseURI = raw.replace(/\/+$/, ""); // NO /m3u8-proxy
     const proxiedSrc = `${baseURI}?url=${encodeURIComponent(src)}&referer=${encodeURIComponent(referer)}`;
+    
 
     // Initialize Artplayer without HLS-control plugin yet
     const art = new Artplayer({
