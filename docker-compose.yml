@@ -18,14 +18,16 @@ services:
       - dokploy-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.proxy.rule=(Host(`4rabanime.fun`, `4rbanime.com`, `4rbanime.fun`) && PathPrefix(`/m3u8-proxy`))"
-      - "traefik.http.routers.proxy.priority=100"  # Highest priority
+      # Higher priority for the proxy service
+      - "traefik.http.routers.proxy.rule=Host(`4rabanime.fun`, `4rbanime.com`, `4rbanime.fun`) && PathPrefix(`/m3u8-proxy`)"
+      - "traefik.http.routers.proxy.priority=200"  # Much higher priority
       - "traefik.http.routers.proxy.entrypoints=websecure"
       - "traefik.http.routers.proxy.tls=true"
       - "traefik.http.routers.proxy.tls.certresolver=letsencrypt"
       - "traefik.http.services.proxy.loadbalancer.server.port=4040"
+      # Strip the prefix middleware
       - "traefik.http.middlewares.strip-m3u8-prefix.stripprefix.prefixes=/m3u8-proxy"
-      - "traefik.http.middlewares.strip-m3u8-prefix.stripprefix.forceslash=true"
+      - "traefik.http.middlewares.strip-m3u8-prefix.stripprefix.forceslash=false"
       - "traefik.http.routers.proxy.middlewares=strip-m3u8-prefix@docker"
 
   4rb-anime:
@@ -40,7 +42,8 @@ services:
       - dokploy-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=(Host(`4rabanime.fun`, `4rbanime.com`, `4rbanime.fun`) && !PathPrefix(`/m3u8-proxy`))"
+      # Explicit exclusion of proxy paths
+      - "traefik.http.routers.app.rule=Host(`4rabanime.fun`, `4rbanime.com`, `4rbanime.fun`) && !PathPrefix(`/m3u8-proxy`)"
       - "traefik.http.routers.app.priority=50"  # Lower priority
       - "traefik.http.routers.app.entrypoints=websecure"
       - "traefik.http.routers.app.tls=true"

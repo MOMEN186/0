@@ -64,10 +64,15 @@ func main() {
 		MustRevalidate: true,
 	}))
 
-	// Routes
-	e.GET("/", handler.M3U8ProxyHandler)
-	e.GET("/health", healthCheck)
-	e.GET("/debug", debugHandler)
+	// Routes - handle both with and without prefix since Traefik strips it
+	e.GET("/", handler.M3U8ProxyHandler)              // After prefix strip
+	e.GET("/health", healthCheck)                     // Health check
+	e.GET("/debug", debugHandler)                     // Debug endpoint
+	
+	// Also handle the original paths in case prefix stripping fails
+	e.GET("/m3u8-proxy", handler.M3U8ProxyHandler)
+	e.GET("/m3u8-proxy/health", healthCheck)
+	e.GET("/m3u8-proxy/debug", debugHandler)
 
 	// Start server
 	serverAddr := fmt.Sprintf(":%s", config.Env.Port)
@@ -82,6 +87,7 @@ func healthCheck(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"status":  "healthy",
 		"version": Version,
+		"service": "m3u8-proxy",
 	})
 }
 
@@ -129,9 +135,7 @@ func parseCorsDomains() []string {
 		} else {
 			// Ensure consistent formatting
 			domain = strings.TrimSuffix(domain, "/")
-			if !strings.HasSuffix(domain, "/") {
-				result = append(result, domain)
-			}
+			result = append(result, domain)
 		}
 	}
 
