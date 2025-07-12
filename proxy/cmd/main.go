@@ -38,7 +38,7 @@ func main() {
 		MustRevalidate: true,
 	}
 	e.Use(mdlware.CacheControlWithConfig(customCacheConfig))
-	e.GET("/m3u8-proxy", handler.M3U8ProxyHandler)
+	e.GET("/", handler.M3U8ProxyHandler)
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.String(200, "OK")
