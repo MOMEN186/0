@@ -11,16 +11,14 @@ services:
     environment:
       PORT: 4040
       REDIS_URL: "redis://redis:6379"
-      CORS_DOMAIN: "https://4rabanime.fun,https://4rabanime.com"
+      CORS_DOMAIN: "https://4rabanime.fun,https://4rbanime.com"
     expose:
       - "4040"
     networks:
       - web
     labels:
       - "traefik.enable=true"
-      - >
-        traefik.http.routers.proxy.rule=Host(`4rbanime.fun`,`4rabanime.com`)
-        && PathPrefix(`/m3u8-proxy`)
+      - "traefik.http.routers.proxy.rule=PathPrefix(`/m3u8-proxy`)"
       - "traefik.http.routers.proxy.entrypoints=websecure"
       - "traefik.http.routers.proxy.tls=true"
       - "traefik.http.routers.proxy.tls.certresolver=myresolver"
@@ -40,7 +38,7 @@ services:
       - web
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`4rbanime.fun`,`4rabanime.com`)"
+      - "traefik.http.routers.app.rule=Host(`4rabanime.fun`, `4rbanime.com`)"
       - "traefik.http.routers.app.entrypoints=websecure"
       - "traefik.http.routers.app.tls=true"
       - "traefik.http.routers.app.tls.certresolver=myresolver"
