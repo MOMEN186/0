@@ -6,62 +6,57 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_PROXY_URL: https://4rabanime.fun
+        NEXT_PUBLIC_PROXY_URL: "/m3u8-proxy"
     env_file:
       - .env.production
     expose:
       - "3000"
     networks:
-      - dokploy-network
+      - web
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.app.rule=Host(`4rabanime.com`, `4rbanime.fun`)"
-      - "traefik.http.routers.app.entrypoints=websecure"
-      - "traefik.http.routers.app.tls=true"
-      - "traefik.http.services.app.loadbalancer.server.port=3000"
+      - "traefik.docker.network=web"
+      # Redirect HTTP → HTTPS
+      - "traefik.http.routers.4rb-redirect.rule=Host(`4rabanime.com`,`www.4rabanime.com`,`4rabanime.fun`,`www.4rabanime.fun`,`4rb.local`) && (Path(`/`) || PathPrefix(`/m3u8-proxy`))"
+      - "traefik.http.routers.4rb-redirect.entrypoints=web"
+      - "traefik.http.routers.4rb-redirect.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      # App router
+      - "traefik.http.routers.4rb-app.rule=Host(`4rabanime.com`,`www.4rabanime.com`,`4rabanime.fun`,`www.4rabanime.fun`,`4rb.local`) && !PathPrefix(`/m3u8-proxy`)"
+      - "traefik.http.routers.4rb-app.entrypoints=websecure"
+      - "traefik.http.routers.4rb-app.tls.certresolver=myresolver"
+      - "traefik.http.services.4rb-anime.loadbalancer.server.port=3000"
+      - "traefik.http.services.4rb-anime.loadbalancer.server.scheme=http"
+      - "traefik.http.services.4rb-anime.loadbalancer.healthcheck.path=/api/health"
+      - "traefik.http.services.4rb-anime.loadbalancer.healthcheck.interval=10s"
 
   proxy:
     image: dovakiin0/proxy-m3u8:latest
     environment:
-      PORT: 4040
+      PORT: "4040"
       REDIS_URL: redis://redis:6379
-      CORS_DOMAIN: "https://4rabanime.com,https://4rbanime.fun"
+      CORS_DOMAIN: "https://4rabanime.com,https://4rabanime.fun,https://4rb.local"
     expose:
       - "4040"
     networks:
-      - dokploy-network
+      - web
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=dokploy-network"
-
-      # —— CORS middleware ——
-      - "traefik.http.middlewares.proxy-cors.headers.customresponseheaders.Access-Control-Allow-Origin=*"
-      - "traefik.http.middlewares.proxy-cors.headers.customresponseheaders.Access-Control-Allow-Methods=GET,OPTIONS,POST"
-      - "traefik.http.middlewares.proxy-cors.headers.customresponseheaders.Access-Control-Allow-Headers=Origin,Accept,Content-Type,Authorization"
-      - "traefik.http.middlewares.proxy-cors.headers.customresponseheaders.Access-Control-Allow-Credentials=true"
-
-      # —— Path stripping middleware ——
-      - "traefik.http.middlewares.strip-proxy.stripprefix.prefixes=/m3u8-proxy"
-
-      # 🔒 HTTPS route for m3u8-proxy
-      - "traefik.http.routers.proxy.rule=Host(`4rabanime.com`,`4rbanime.fun`) && PathPrefix(`/m3u8-proxy`)"
-      - "traefik.http.routers.proxy.entrypoints=websecure"
-      - "traefik.http.routers.proxy.tls=true"
-      - "traefik.http.routers.proxy.middlewares=strip-proxy,proxy-cors"
+      - "traefik.docker.network=web"
+      # Strip prefix
+      - "traefik.http.middlewares.strip-m3u8.stripprefix.prefixes=/m3u8-proxy"
+      # Proxy router public
+      - "traefik.http.routers.4rb-proxy.rule=Host(`4rabanime.com`,`www.4rabanime.com`,`4rabanime.fun`,`www.4rabanime.fun`,`4rb.local`) && PathPrefix(`/m3u8-proxy`)"
+      - "traefik.http.routers.4rb-proxy.entrypoints=websecure"
+      - "traefik.http.routers.4rb-proxy.tls.certresolver=myresolver"
+      - "traefik.http.routers.4rb-proxy.middlewares=strip-m3u8"
       - "traefik.http.services.proxy.loadbalancer.server.port=4040"
-
-      # HTTP ➜ HTTPS redirect
-      - "traefik.http.routers.proxy-http.rule=Host(`4rabanime.com`,`4rbanime.fun`) && PathPrefix(`/m3u8-proxy`)"
-      - "traefik.http.routers.proxy-http.entrypoints=web"
-      - "traefik.http.routers.proxy-http.middlewares=https-redirect"
-      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
 
   redis:
     image: redis:7-alpine
     networks:
-      - dokploy-network
+      - web
 
 networks:
-  dokploy-network:
+  web:
     external: true
