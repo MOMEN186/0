@@ -18,9 +18,8 @@ services:
       - web
     labels:
       - "traefik.enable=true"
-      - >
-        traefik.http.routers.proxy.rule=Host(`4rabanime.fun`, `4rbanime.com`)
-        && PathPrefix(`/m3u8-proxy`)
+      - "traefik.http.routers.proxy.rule=Host(`4rabanime.fun`, `4rbanime.com`, `4rbanime.fun`) && PathPrefix(`/m3u8-proxy`)"
+      - "traefik.http.routers.proxy.priority=10"  # Higher priority than Next.js
       - "traefik.http.routers.proxy.entrypoints=websecure"
       - "traefik.http.routers.proxy.tls=true"
       - "traefik.http.routers.proxy.tls.certresolver=myresolver"
@@ -40,7 +39,7 @@ services:
       - web
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`4rabanime.fun`, `4rbanime.com`)"
+      - "traefik.http.routers.app.rule=Host(`4rabanime.fun`, `4rbanime.com`, `4rbanime.fun`) && !PathPrefix(`/m3u8-proxy`)"
       - "traefik.http.routers.app.entrypoints=websecure"
       - "traefik.http.routers.app.tls=true"
       - "traefik.http.routers.app.tls.certresolver=myresolver"

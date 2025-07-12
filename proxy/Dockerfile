@@ -12,7 +12,6 @@ ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-w -s" -o /app/server cmd/main.go
 
-
 FROM alpine:latest
 
 WORKDIR /app
