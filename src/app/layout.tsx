@@ -6,10 +6,10 @@ import Footer from "@/components/footer";
 import Script from "next/script";
 import QueryProvider from "@/providers/query-provider";
 import { PublicEnvScript } from "next-runtime-env";
-import ThemeProvider  from "@/components/theme-provider";
+import ThemeProvider from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import ClientOnly from "@/components/ClientOnly";
-import 'artplayer';                // brings in default skin via JS
+import "artplayer"; // brings in default skin via JS
 import dynamic from "next/dynamic";
 
 const FirebaseAuthProvider = dynamic(
@@ -28,9 +28,9 @@ const geistSans = localFont({
 //   weight: "100 900",
 // });
 
-const APP_NAME = "4RB ANIME";
-const APP_DEFAULT_TITLE = "4RB ANIME | Anime Streaming";
-const APP_DESCRIPTION = "Stream your favourite anime with ease and no ads";
+const APP_NAME = "UNEX ANIME";
+const APP_DEFAULT_TITLE = "UnexAnime – Watch Anime Online Free in HD (Sub & Dub)";
+const APP_DESCRIPTION = "Watch anime online for free in HD. Stream the latest subbed and dubbed episodes instantly with fast servers on UnexAnime — no sign-up required.";
 
 export const metadata: Metadata = {
   applicationName: APP_NAME,
@@ -58,8 +58,6 @@ export const metadata: Metadata = {
   },
 };
 
-
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -68,6 +66,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+      
         <meta name="mobile-web-app-capable" content="yes"></meta>
         <meta name="monetag" content="131167917e3df270be7693e6a5f78edc" />
         <Script
@@ -85,39 +84,34 @@ export default function RootLayout({
         <PublicEnvScript />
         <link rel="icon" href="/icon.png" type="image/png" sizes="192x192" />
         <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3940256099942544"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
-        <Script
           src="https://fpyf8.com/88/tag.min.js"
-          data-zone="152715"
+          data-zone="157084"
           async
           data-cfasync="false"
-          strategy="lazyOnload"
+          strategy="afterInteractive"
         />
+     
       </head>
       <body
         className={`${geistSans.className} antialiased max-w-[100vw] overflow-x-hidden`}
       >
         <ClientOnly>
           <FirebaseAuthProvider>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <QueryProvider>
-            <NavBar />
-            {children}
-            <Footer />
-            <Toaster />
-          </QueryProvider>
-          </ThemeProvider>
-        </FirebaseAuthProvider>
-          </ClientOnly>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <QueryProvider>
+                <NavBar />
+                {children}
+                <Footer />
+                <Toaster />
+              </QueryProvider>
+            </ThemeProvider>
+          </FirebaseAuthProvider>
+        </ClientOnly>
       </body>
     </html>
   );
